@@ -519,7 +519,7 @@ function fetchRouteAndRender(elevationService) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-Goog-Api-Key': apiKey,
+            //'X-Goog-Api-Key': apiKey,
             'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline,routes.legs.steps',
         },
         body: JSON.stringify(requestData),
