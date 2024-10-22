@@ -526,6 +526,7 @@ function fetchRouteAndRender(elevationService) {
     })
     .then((response) => response.json())
     .then((data) => {
+        console.log('Response:', data);
         // Clear existing polylines and ratings list
         clearAllPolylines();
         const ratingsList = document.getElementById('Ratings_List');
