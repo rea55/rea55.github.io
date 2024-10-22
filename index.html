@@ -10,10 +10,65 @@
 </head>
 <body>
 
-  <p>hiya</p>
+  <div id="title">
+    <div id="logo">
+    <a href="https://ibb.co/NtLLbXH"><img src="https://i.ibb.co/JmzzgNM/Bikemaplogo1.jpg" alt="Bikemaplogo1" id="title_logo"></a>
+    </div>
+    <div id="otherlinks">
+      <button class="otherlinks_button" id="HowToUseBTN">How to use</button>
+      <button class="otherlinks_button" id="AboutMeBTN">About me</button>
+      <button class="otherlinks_button" id="ContactBTN">Contact</button>
+      <!--<button class="otherlinks_button" id="ContactBTN">How it works</button>-->
+    </div>
+  </div>
+  <div id="title_placeholder">
+
+  </div>
+  <div id="settings">
+  </div>
+  <div id="map_container">
+    <div id="map"></div>
+  </div>
+  <div id="Ratings_Container">
+  <h1>Ratings:</h1>
+  <div id="Ratings_List"></div>
+</div>
+
+  <div id="HowToUse">
+    <h1>How to use</h1>
+    <p>Type your Starting Location into the Search bar. Press the "Choose As A" Button. The "A" Marker shows your starting Location. Now type your Ending Location and choose it as "B". The "B" Marker shows your End location. The Map will now Display up to 3 Roads. If there are less, that means that the other Routes are way too long</p>
+  </div>
+  <div id="AboutMe">
+    <h1>About me</h1>
+    <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Quo, facilis repellat temporibus error porro et blanditiis maiores itaque ex excepturi eum voluptates alias debitis sunt obcaecati magnam consequuntur, iste dolore.</p>
+  </div>
+  <div id="Contact">
+    <h1>Contact</h1>
+    <p>Please Contact me when you find an issue.Zürich, Switzerland
+    <br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+    </p>
+  </div>
+
+  <button id="ScrollUpBTN"><img src="https://i.ibb.co/w6jPH9d/arrow-strassenschild1.png" alt="arrow-strassenschild1" id="ScrollUpBTN-IMG"></button>
 
 
 
-  <script  src="script.js" defer></script>
+  
+  <!--<div id="address"></div>    To display addresses if needed -->
+  <input type="text" placeholder="Search..." id="searchBar">
+
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+  <!--<script src="turf.min.js" charset="utf-8"></script>-->
+
+
+
+  <script  src="script2.js" defer></script>
+  <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAG8M_Uhho1glaT4N1MRY3ZsaNkywROGTk&libraries=geometry,places&callback=initMap">
+  </script>
+
+
+
 </body> 
 </html>
