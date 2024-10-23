@@ -1,7 +1,3 @@
-//Whenever m/m is written with this the max/min normalization algorithm is meant.
-//import { buffer, distance } from '@turf/turf';
-
-
 let map;                        
 let latcenter = 47.288343;      //The Center of the Map
 let lngcenter = 8.564533;       
@@ -13,21 +9,12 @@ let chosenlat = 0;              //the Coordinates of the new chosen location
 let chosenlng = 0;              
 const searchBar = document.getElementById('searchBar');     //the search Bar
 const markers = {};             //An Array of all the Markers
-let minDistance = 0;            //The smallest of all the Distances
-let maxDistance = 0;            //The longest of all the Distances 
-var coordinates = []
 
-let FinalRatings = [];          //All the final Ratings
+let percentageIntersectingAreaList = [] //A list of the percentage of the route that intersects with bike paths
 
-let minElevation = [];          //A list of the smallest/highest Elevation for each route
-let maxElevation = [];  
-let ElevationRatings = [];
-    
-let pointswithoutpath = 0;
-let pointswithpath = 0;           
+var coordinates = []            
 
 let RoutesDistancesList = [];   //A list the distance for each route
-let normalizedDistancesList = [];  //A list of the distances for each route calculated usin m/m
 
 let polylinesArray = []; // Array to store polylines
 
@@ -35,24 +22,16 @@ let routeColors = ['#FF0000', '#000000', '#0000FF']; // Red, Black, Blue
 
 let RouteNames = ['Red', 'Black', 'Blue']; //A list of the names of all the routes which will be displayed in the "Ratings" part of the HTML
 
-const apiKey = 'AIzaSyAG8M_Uhho1glaT4N1MRY3ZsaNkywROGTk';   //my google maps API key LIMITED TO THIS SITE ONLY FUCK YOU IF YOUR TRYING TO STEAL MY MONEY 
+const apiKey = 'AIzaSyAG8M_Uhho1glaT4N1MRY3ZsaNkywROGTk';   //my google maps API key
 const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';    //The link that is used to make a request to google maps to compute the routes
 
 let BikePathsFound = false
 
 function ResetVars() {
     console.log('RESETTING VARIABLES')
-    minDistance = 0;
-    maxDistance = 0;
     coordinates = [];
-    FinalRatings =[];
-    minElevation = [];
-    maxElevation = [];
-    ElevationRatings = [];
-    pointswithoutpath = 0;
-    pointswithpath = 0;
     RoutesDistancesList = [];
-    normalizedDistancesList = [];
+    percentageIntersectingAreaList = [];
 
 
 }
@@ -77,30 +56,9 @@ function delMarker(name) {                          //deletes a marker by it nam
     }
 }
 
-/*
-function calculateFinalRatings(list1, list2) {          //puts two lists of ratings together by calculating their mean and putting them into the final ratings lists
-    console.log(list1, list2, 'OCCA')
-    let sum = 0;
-    let numtodel = FinalRatings.length
-
-    if (list1.length === list2.length) {
-        for (const index in list1) { 
-            sum = (list1[index] + list2[index])/2;
-            FinalRatings.push(sum)
-        }
-
-        for (let i = 0; i < numtodel; i++) {        //delete all the old items in the "Final Ratings"list
-            FinalRatings.shift()
-          } 
-    }
-    else{
-        console.log('couldnt calculate Ratings because Lists arent the same length. A likely Reason is the "FinalRatings" was calculated before the Elevation Data was fetched.')
-    }
-}
-*/
-
-
 function checkSegmentOnBikePath(segment, bikePaths, bufferSize = 10) {
+    totalIntersectionArea = 0; // Initialize totalIntersectionArea here
+    console.log('bikepath', bikePaths);
     console.log('Checking segment:', segment);
 
     // Validate segment
@@ -123,8 +81,13 @@ function checkSegmentOnBikePath(segment, bikePaths, bufferSize = 10) {
     console.log("GeoJSON segment:", JSON.stringify(lineSegment, null, 2)); // Log GeoJSON format of the segment
 
     // Buffer the segment to create a polygon around it
-    const bufferedSegment = turf.buffer(lineSegment, bufferSize, { units: 'meters' });
+    const bufferedSegment = turf.buffer(lineSegment, 0.1, { units: 'meters' });
     console.log("Buffered segment:", JSON.stringify(bufferedSegment, null, 2));
+
+    const bufferedSegmentArea = turf.area(bufferedSegment);
+    console.log(`Area of buffered segment: ${bufferedSegmentArea.toFixed(2)} square meters`);
+
+    let totalIntersectingLength = 0; // Initialize totalIntersectingLength here
 
     for (const path of bikePaths) {
         // Validate bike path geometry
@@ -139,6 +102,8 @@ function checkSegmentOnBikePath(segment, bikePaths, bufferSize = 10) {
             parseFloat(coord.lat)
         ]);
 
+        console.log('Coordinates UwU:', coordinates, path);
+
         if (coordinates.length === 0) {
             console.error("Empty bike path coordinates:", path);
             continue;
@@ -152,70 +117,38 @@ function checkSegmentOnBikePath(segment, bikePaths, bufferSize = 10) {
         console.log("Buffered bike path:", JSON.stringify(bufferedBikePath, null, 2));
 
         // Check if the buffered segment intersects with the buffered bike path
-        const intersection = turf.booleanIntersects(bufferedSegment, bufferedBikePath);
-        console.log("Intersection is", intersection);
+        const intersection = turf.intersect(bufferedSegment, bufferedBikePath);
         if (intersection) {
+            console.log("GeoJSON intersection:", JSON.stringify(intersection, null, 2));
             console.log("Intersection found between segment and bike path.");
             const intersectionLength = turf.length(intersection, { units: 'meters' });
             totalIntersectingLength += intersectionLength;
+
+            // Calculate the area of the intersection and add to totalIntersectionArea
+            const intersectionArea = turf.area(intersection);
+            totalIntersectionArea += intersectionArea;
+            
         } else {
             console.log("No intersection found for segment.");
-            return false;
+            continue; // Skip to the next path
         }
-        let totalIntersectingLength = 0;
-        const totalSegmentLength = turf.length(lineSegment, { units: 'meters' });
-
     }
+    const totalSegmentLength = turf.length(lineSegment, { units: 'meters' });
     const percentageIntersecting = (totalIntersectingLength / totalSegmentLength) * 100;
+    percentageIntersectingArea = ((totalIntersectionArea/bufferedSegmentArea)*100)
+    percentageIntersectingAreaList.push(percentageIntersectingArea)
+    console.log('BOOP', totalSegmentLength, totalIntersectingLength)
     console.log(`Percentage of segment intersecting with bike paths: ${percentageIntersecting.toFixed(2)}%`);
+    console.log(`Percentage of segment areaintersecting with bike paths: ${percentageIntersectingArea.toFixed(2)}%`);
+
+
+    console.log(`Total area of intersections: ${totalIntersectionArea.toFixed(2)} square meters`);
+
     return percentageIntersecting;
 }
 
 
 
-
-
-
-async function checkBicyclePath(lat, lon) {
-    // Define a small bounding box around the coordinate to search for bicycle paths
-    const delta = 0.001; // Adjust the precision as needed
-    const minLatDot = lat - delta;
-    const minLonDot = lon - delta;
-    const maxLatDot = lat + delta;
-    const maxLonDot = lon + delta;
-  
-    // Construct the Overpass API query
-    const query = `
-      [out:json];
-      (
-        way["highway"="cycleway"](${minLatDot},${minLonDot},${maxLatDot},${maxLonDot});
-        relation["highway"="cycleway"](${minLatDot},${minLonDot},${maxLatDot},${maxLonDot});
-      );
-      out body;
-    `;
-  
-    const url = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(query);
-  
-    try {
-      const response = await fetch(url);
-      const data = await response.json();
-  
-      // Check if any bicycle paths are found
-      if (data.elements && data.elements.length > 0) {
-        //console.log('Bicycle path found near the coordinate. BABAGANOOSH');
-        pointswithpath += 1
-        return true;
-      } else {
-        //console.log('No bicycle path found near the coordinate.');
-        pointswithoutpath += 1
-        return false;
-      }
-    } catch (error) {
-      console.error('Error querying Overpass API:', error);
-      return false;
-    }
-  }
-  
 
 function initMap() {
     var directionsService = new google.maps.DirectionsService();
@@ -382,16 +315,7 @@ function scrolltotop() {
     }
 }
 
-function calculateNormalizedDistance(){
-    if (RoutesDistancesList.length === polylinesArray.length) {
-        minDistance = Math.min(...RoutesDistancesList)
-        maxDistance = Math.max(...RoutesDistancesList)
 
-        for (let i of RoutesDistancesList) {
-            normalizedDistancesList.push((i-minDistance)/(maxDistance-minDistance)); 
-        }
-    }
-}
 
 
 async function getBikePaths(bbox) {
@@ -478,6 +402,7 @@ function checkForOSMBikepaths(PolylineCoords) {
             BikePathsFound = false
         }
         else{
+            console.log('length', data.elements.length)
             //console.log('ITS TRUE GIRLIES')
             BikePathsFound = true
             checkSegmentOnBikePath(segments, data.elements)
@@ -526,7 +451,6 @@ function fetchRouteAndRender(elevationService) {
     })
     .then((response) => response.json())
     .then((data) => {
-        console.log('Response:', data);
         // Clear existing polylines and ratings list
         clearAllPolylines();
         const ratingsList = document.getElementById('Ratings_List');
@@ -534,7 +458,6 @@ function fetchRouteAndRender(elevationService) {
 
         const polylines = data.routes.map((route) => route.polyline.encodedPolyline);
         const totalDistance = data.routes.reduce((sum, route) => sum + route.distanceMeters, 0);
-        let normalizedDistancesList = [];
 
         polylines.forEach((polyline, index) => {
             const decodedPolyline = google.maps.geometry.encoding.decodePath(polyline);
@@ -548,8 +471,7 @@ function fetchRouteAndRender(elevationService) {
             const routeDistance = data.routes[index].distanceMeters;
             RoutesDistancesList.push(routeDistance);
             
-            const normalizedDistance = routeDistance / totalDistance;
-            normalizedDistancesList.push(normalizedDistance);
+
             
             const routePolyline = new google.maps.Polyline({
                 path: decodedPolyline,
@@ -565,7 +487,8 @@ function fetchRouteAndRender(elevationService) {
             // Fetch elevation data for the route
             fetchElevationData(elevationService, decodedPolyline, index);
             
-            
+            checkForOSMBikepaths(PolylineCoords)
+
             setTimeout(()=>{
                 //console.log('polylen', polylinesArray.length)
                 if(polylinesArray.length == 1){
@@ -573,29 +496,26 @@ function fetchRouteAndRender(elevationService) {
                     ratingItem.innerText = 'Only one viable route found'
                     ratingsList.appendChild(ratingItem);
                 }
-                else if (!Array.isArray(FinalRatings) || FinalRatings.some(isNaN)) {
-                    console.error('FinalRatings is not a valid array of numbers. This might be because FinalRatings is not calculated yet:', FinalRatings);
-                } 
 
                 else {
                     const ratingItem = document.createElement('p');
-                    //ratingItem.innerText = `${RouteNames[index]}:  ${Math.round(FinalRatings[index] * 100)/100}`;
-                    ratingItem.innerText = `${RouteNames[index]}: ${normalizedDistancesList[index]}, ${ElevationRatings [index]} `;
+                    console.log('agag', metersuplist, percentageIntersectingAreaList)
+                    ratingItem.innerText = `${RouteNames[index]}: \n 
+                    Distance: ${routeDistance.toFixed(2)} meters\n
+                    Elevation Gain: ${metersuplist[index].toFixed(2)} meters\n
+                    Elevation Loss: ${metersdownlist[index].toFixed(2)} meters\n
+                    Bike Paths: ${percentageIntersectingAreaList[index].toFixed(2)}%`;
                     ratingsList.appendChild(ratingItem);
                     
                 }
 
 
-            },10000)
-            checkForOSMBikepaths(PolylineCoords)
+            },2000)
 
 
         });
         
-        calculateNormalizedDistance();
-        
-        //setTimeout(() => {  calculateFinalRatings(normalizedDistancesList, ElevationRatings); }, 5000);        
-        
+                
         
     })
     .catch((error) => console.error('Error:', error));
@@ -606,7 +526,6 @@ function fetchElevationData(elevationService, path, routeIndex) {
     metersdownlist =[]
     //console.log('yaaasass', RoutesDistancesList)
     numbersOfSamples = Math.round(RoutesDistancesList[0]/100)                                      //WORK ON THIS ONLY WORKS IF LEN(RoutesDisatancesList === 1)
-    numbersOfSamples = 2 //DELETE LATER ONLY SO IT RUNS FAST
     //console.log('NOMBER OF SAMPLES', numbersOfSamples)
     const pathRequest = {
         path: path,
@@ -647,17 +566,6 @@ function fetchElevationData(elevationService, path, routeIndex) {
                 metersdownlist.push(metersdown)
                 metersuplist.push(metersup)
 
-                if (metersuplist.length === polylinesArray.length) {
-                    minElevation = Math.min(...metersuplist)
-                    maxElevation = Math.max(...metersuplist)
-                    ElevationRatings = []
-                    //('default', ElevationRatings)
-                    for (let i of metersuplist) {
-                        ElevationRatings.push((i-minElevation)/(maxElevation-minElevation)); 
-                        //console.log('ABGE', ElevationRatings)
-
-                    }
-                }
 
 
             } else {
@@ -667,7 +575,7 @@ function fetchElevationData(elevationService, path, routeIndex) {
             console.error('Elevation service failed due to:', status);
         }
 
-    window.setTimeout(() => CheckForBicyclePathsAlongRoute(), 200);
+    //window.setTimeout(() => CheckForBicyclePathsAlongRoute(), 200);
 
 
     });
@@ -682,7 +590,7 @@ function clearAllPolylines() {
     });
     polylinesArray = [];
 }
-
+/*
 function CheckForBicyclePathsAlongRoute(){
     //('CHECKING WAA', coordinates)
     for (i in coordinates){
@@ -690,7 +598,7 @@ function CheckForBicyclePathsAlongRoute(){
         checkBicyclePath(coordinates[i].lat, coordinates[i].lng)
     }
 }
-
+*/
 function convertPolylineToRoute(){
 
 }
@@ -706,3 +614,6 @@ window.initMap = initMap;
 }
 
 setTimeout(run, 1000)
+
+
+//key page: AIzaSyAG8M_Uhho1glaT4N1MRY3ZsaNkywROGTk
