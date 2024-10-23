@@ -1,10 +1,10 @@
 let map;                        
 let latcenter = 47.288343;      //The Center of the Map
 let lngcenter = 8.564533;       
-let lat1 = 47.288343;           //The Coordinates of the Marker no1
-let lng1 = 8.564533;            
-let lat2 = 47.288361;           //The Coordinates of the Marker no2
-let lng2 = 8.562417;                                      
+let lat1 = 47.22015;           //The Coordinates of the Marker no1
+let lng1 = 8.32423;            
+let lat2 = 47.21595;           //The Coordinates of the Marker no2
+let lng2 = 8.32287;                                      
 let chosenlat = 0;              //the Coordinates of the new chosen location
 let chosenlng = 0;              
 const searchBar = document.getElementById('searchBar');     //the search Bar
@@ -502,8 +502,8 @@ function fetchRouteAndRender(elevationService) {
                     console.log('agag', metersuplist, percentageIntersectingAreaList)
                     ratingItem.innerText = `${RouteNames[index]}: \n 
                     Distance: ${routeDistance.toFixed(2)} meters\n
-                    Elevation Gain: ${metersuplist[index].toFixed(2)} meters\n
-                    Elevation Loss: ${metersdownlist[index].toFixed(2)} meters\n
+                    Elevation Gain: ${(metersuplist[index].toFixed(2))/10} meters\n
+                    Elevation Loss: ${(metersdownlist[index].toFixed(2))/10} meters\n
                     Bike Paths: ${percentageIntersectingAreaList[index].toFixed(2)}%`;
                     ratingsList.appendChild(ratingItem);
                     
