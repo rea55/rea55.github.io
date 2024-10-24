@@ -1,10 +1,10 @@
 let map;                        
-let latcenter = 47.288343;      //The Center of the Map
-let lngcenter = 8.564533;       
-let lat1 = 47.22015;           //The Coordinates of the Marker no1
-let lng1 = 8.32423;            
-let lat2 = 47.21595;           //The Coordinates of the Marker no2
-let lng2 = 8.32287;                                      
+let latcenter = 47.367194;      //The Center of the Map
+let lngcenter = 8.545139;       
+let lat1 = 47.367194;           //The Coordinates of the Marker no1
+let lng1 = 8.545139;            
+let lat2 = 47.366389;           //The Coordinates of the Marker no2
+let lng2 = 8.541444;                                      
 let chosenlat = 0;              //the Coordinates of the new chosen location
 let chosenlng = 0;              
 const searchBar = document.getElementById('searchBar');     //the search Bar
