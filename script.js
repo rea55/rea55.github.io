@@ -10,6 +10,10 @@ let chosenlng = 0;
 const searchBar = document.getElementById('searchBar');     //the search Bar
 const markers = {};             //An Array of all the Markers
 
+let finalBikePathsArray = [[], []]    //An Array of the percentage of the route that intersects with different types of bike paths. Geometry: [[percentage1.1, percentage1.2, percentage1.3], [percentage2.1, percentage2.2, percentage2.3], ...]
+
+const ratingsList = document.getElementById('Ratings_List'); //The list of all the ratings of the routes
+
 let percentageIntersectingAreaList = [] //A list of the percentage of the route that intersects with bike paths
 
 var coordinates = []            
@@ -27,13 +31,21 @@ const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';    //Th
 
 let BikePathsFound = false
 
+
+
 function ResetVars() {
     console.log('RESETTING VARIABLES')
     coordinates = [];
     RoutesDistancesList = [];
     percentageIntersectingAreaList = [];
-
-
+    finalBikePathsArray = [[], []];
+    metersuplist = [];
+    metersdownlist = [];
+    metersup = 0;
+    metersdown = 0;
+    BikePathsFound = false;
+    clearAllPolylines();
+    //ratingsList.innerHTML = '';
 }
 
 function addMarker(name, lat, lng, Label) {         //Adds a Marker to the map, taking its Name, position, and a label and adds it to a list of all markers
@@ -56,7 +68,7 @@ function delMarker(name) {                          //deletes a marker by it nam
     }
 }
 
-function checkSegmentOnBikePath(segment, bikePaths, bufferSize = 10) {
+function checkSegmentOnBikePath(segment, bikePaths, type, bufferSize = 10) {
     totalIntersectionArea = 0; // Initialize totalIntersectionArea here
     console.log('bikepath', bikePaths);
     console.log('Checking segment:', segment);
@@ -78,14 +90,14 @@ function checkSegmentOnBikePath(segment, bikePaths, bufferSize = 10) {
         validsegment[i].shift();
     }
     const lineSegment = turf.lineString(validsegment);
-    console.log("GeoJSON segment:", JSON.stringify(lineSegment, null, 2)); // Log GeoJSON format of the segment
+    //console.log("GeoJSON segment:", JSON.stringify(lineSegment, null, 2)); // Log GeoJSON format of the segment
 
     // Buffer the segment to create a polygon around it
     const bufferedSegment = turf.buffer(lineSegment, 0.1, { units: 'meters' });
-    console.log("Buffered segment:", JSON.stringify(bufferedSegment, null, 2));
+    //console.log("Buffered segment:", JSON.stringify(bufferedSegment, null, 2));
 
     const bufferedSegmentArea = turf.area(bufferedSegment);
-    console.log(`Area of buffered segment: ${bufferedSegmentArea.toFixed(2)} square meters`);
+    //console.log(`Area of buffered segment: ${bufferedSegmentArea.toFixed(2)} square meters`);
 
     let totalIntersectingLength = 0; // Initialize totalIntersectingLength here
 
@@ -102,7 +114,7 @@ function checkSegmentOnBikePath(segment, bikePaths, bufferSize = 10) {
             parseFloat(coord.lat)
         ]);
 
-        console.log('Coordinates UwU:', coordinates, path);
+        //console.log('Coordinates:', coordinates, path);
 
         if (coordinates.length === 0) {
             console.error("Empty bike path coordinates:", path);
@@ -110,16 +122,16 @@ function checkSegmentOnBikePath(segment, bikePaths, bufferSize = 10) {
         }
 
         const bikePath = turf.lineString(coordinates);
-        console.log("GeoJSON bike path:", JSON.stringify(bikePath, null, 2));
+        //console.log("GeoJSON bike path:", JSON.stringify(bikePath, null, 2));
 
         // Buffer the bike path (optional for tolerance)
         const bufferedBikePath = turf.buffer(bikePath, bufferSize, { units: 'meters' });
-        console.log("Buffered bike path:", JSON.stringify(bufferedBikePath, null, 2));
+        //console.log("Buffered bike path:", JSON.stringify(bufferedBikePath, null, 2));
 
         // Check if the buffered segment intersects with the buffered bike path
         const intersection = turf.intersect(bufferedSegment, bufferedBikePath);
         if (intersection) {
-            console.log("GeoJSON intersection:", JSON.stringify(intersection, null, 2));
+            //console.log("GeoJSON intersection:", JSON.stringify(intersection, null, 2));
             console.log("Intersection found between segment and bike path.");
             const intersectionLength = turf.length(intersection, { units: 'meters' });
             totalIntersectingLength += intersectionLength;
@@ -140,11 +152,18 @@ function checkSegmentOnBikePath(segment, bikePaths, bufferSize = 10) {
     console.log('BOOP', totalSegmentLength, totalIntersectingLength)
     console.log(`Percentage of segment intersecting with bike paths: ${percentageIntersecting.toFixed(2)}%`);
     console.log(`Percentage of segment areaintersecting with bike paths: ${percentageIntersectingArea.toFixed(2)}%`);
-
-
     console.log(`Total area of intersections: ${totalIntersectionArea.toFixed(2)} square meters`);
+    console.log('PERCENTAGE', percentageIntersectingAreaList)
 
-    return percentageIntersecting;
+    if (percentageIntersectingAreaList.length == polylinesArray.length) {
+        if (type == 'highway=cycleway' ){
+            finalBikePathsArray[0] = percentageIntersectingAreaList
+        } else if (type == 'bicycle=yes' ){
+            finalBikePathsArray[1] = percentageIntersectingAreaList
+        }
+        console.log('FINAL', finalBikePathsArray, type)
+        percentageIntersectingAreaList = []
+    }
 }
 
 
@@ -318,10 +337,10 @@ function scrolltotop() {
 
 
 
-async function getBikePaths(bbox) {
+async function getBikePaths(bbox, type) {
     const query = `
     [out:json];
-    way["highway"="cycleway"](${bbox[0]}, ${bbox[1]}, ${bbox[2]}, ${bbox[3]});
+    way[${type}](${bbox[0]}, ${bbox[1]}, ${bbox[2]}, ${bbox[3]});
     out geom;
     `;
     
@@ -364,11 +383,30 @@ function drawBoundaryBoxForOSMCheck(bottom_left, top_right){
       });
 }
 
+function findAndCheckBikePaths(type, bbox, segments) {
+    console.log('Finding bike paths of type:', type);
+    return getBikePaths(bbox, type).then(data => {
+        if (data.elements.length == 0){
+            console.log('No bike paths found for type:', type);
+            BikePathsFound = false
+            if (type == 'highway=cycleway' ){
+                finalBikePathsArray[0].push(0)
+            } else if (type == 'bicycle=yes' ){
+                finalBikePathsArray[1].push(0)
+            }
+            //the following problem: if there are no bike paths found, the function will not be called again, so the finalBikePathsArray will not be filled with the percentage of the route that intersects with the bike paths
+        }
+        else{
+            console.log('length', data.elements.length)
+            BikePathsFound = true
+            checkSegmentOnBikePath(segments, data.elements, type)
+        }
+    });
+}
 
 function checkForOSMBikepaths(PolylineCoords) {
     let bbox_bottom_left =[200,200]
     let bbox_top_right = [-200,-200]
-    //console.log('GAY', PolylineCoords);
     const segments = [];
     
     for (let i = 0; i < PolylineCoords.length - 1; i++) {
@@ -393,23 +431,10 @@ function checkForOSMBikepaths(PolylineCoords) {
     //drawBoundaryBoxForOSMCheck(bbox_bottom_left, bbox_top_right)
     
     const bbox = [bbox_bottom_left[0], bbox_bottom_left[1], bbox_top_right[0], bbox_top_right[1]];
-
-
-    getBikePaths(bbox).then(data => {
-        //console.log('BI(cycle)', data); // Contains the bike path data from OSM  
-        //console.log('check', data.elements, data.elements.length)
-        if (data.elements.length == 0){
-            BikePathsFound = false
-        }
-        else{
-            console.log('length', data.elements.length)
-            //console.log('ITS TRUE GIRLIES')
-            BikePathsFound = true
-            checkSegmentOnBikePath(segments, data.elements)
-
-        }
+    findAndCheckBikePaths('highway=cycleway', bbox, segments).then(() => {
+        return findAndCheckBikePaths('bicycle=yes', bbox, segments);
     });
-    }
+}
 
 
     
@@ -453,7 +478,6 @@ function fetchRouteAndRender(elevationService) {
     .then((data) => {
         // Clear existing polylines and ratings list
         clearAllPolylines();
-        const ratingsList = document.getElementById('Ratings_List');
         ratingsList.innerHTML = '';
 
         const polylines = data.routes.map((route) => route.polyline.encodedPolyline);
@@ -461,7 +485,6 @@ function fetchRouteAndRender(elevationService) {
 
         polylines.forEach((polyline, index) => {
             const decodedPolyline = google.maps.geometry.encoding.decodePath(polyline);
-            //console.log('POLYSEXUAL', decodedPolyline)
             let PolylineCoords = []
             decodedPolyline.forEach((point, pointIndex) => {
                 PolylineCoords.push([point.lat(), point.lng()])
@@ -487,31 +510,39 @@ function fetchRouteAndRender(elevationService) {
             // Fetch elevation data for the route
             fetchElevationData(elevationService, decodedPolyline, index);
             
-            checkForOSMBikepaths(PolylineCoords)
+            checkForOSMBikepaths(PolylineCoords);
 
-            setTimeout(()=>{
-                //console.log('polylen', polylinesArray.length)
-                if(polylinesArray.length == 1){
-                    const ratingItem = document.createElement('p');
-                    ratingItem.innerText = 'Only one viable route found'
-                    ratingsList.appendChild(ratingItem);
-                }
+            setTimeout(() => {
+                const ratingItem = document.createElement('p');
+                console.log('agag', metersuplist, finalBikePathsArray); // Debugging log
 
-                else {
-                    const ratingItem = document.createElement('p');
-                    console.log('agag', metersuplist, percentageIntersectingAreaList)
+                // Check if finalBikePathsArray[1] and finalBikePathsArray[0] are defined
+                if (finalBikePathsArray[1] && finalBikePathsArray[1][index] !== undefined && finalBikePathsArray[0] && finalBikePathsArray[0][index] !== undefined) {
                     ratingItem.innerText = `${RouteNames[index]}: \n 
                     Distance: ${routeDistance.toFixed(2)} meters\n
-                    Elevation Gain: ${(metersuplist[index].toFixed(2))/10} meters\n
-                    Elevation Loss: ${(metersdownlist[index].toFixed(2))/10} meters\n
-                    Bike Paths: ${percentageIntersectingAreaList[index].toFixed(2)}%`;
-                    ratingsList.appendChild(ratingItem);
-                    
+                    Elevation Gain: ${metersuplist[index].toFixed(2)} meters\n
+                    Elevation Loss: ${metersdownlist[index].toFixed(2)} meters\n
+                    highway=cycleway: ${finalBikePathsArray[0][index].toFixed(2)}%\n
+                    bicycle=yes: ${finalBikePathsArray[1][index].toFixed(2)}%\n`;
+                } else if (finalBikePathsArray[0] && finalBikePathsArray[0][index] !== undefined) {
+                    ratingItem.innerText = `${RouteNames[index]}: \n 
+                    Distance: ${routeDistance.toFixed(2)} meters\n
+                    Elevation Gain: ${metersuplist[index].toFixed(2)} meters\n
+                    Elevation Loss: ${metersdownlist[index].toFixed(2)} meters\n
+                    highway=cycleway: ${finalBikePathsArray[0][index].toFixed(2)}%\n
+                    bicycle=yes: Data not available\n`;
+                } else {
+                    ratingItem.innerText = `${RouteNames[index]}: \n 
+                    Distance: ${routeDistance.toFixed(2)} meters\n
+                    Elevation Gain: ${metersuplist[index].toFixed(2)} meters\n
+                    Elevation Loss: ${metersdownlist[index].toFixed(2)} meters\n
+                    highway=cycleway: Data not available\n
+                    bicycle=yes: Data not available\n`;
                 }
 
-
-            },2000)
-
+                ratingsList.appendChild(ratingItem);
+            }, 5000); // Ensure the timeout duration is sufficient for async operations
+            
 
         });
         
@@ -524,9 +555,8 @@ function fetchRouteAndRender(elevationService) {
 function fetchElevationData(elevationService, path, routeIndex) {
     metersuplist = []
     metersdownlist =[]
-    //console.log('yaaasass', RoutesDistancesList)
     numbersOfSamples = Math.round(RoutesDistancesList[0]/100)                                      //WORK ON THIS ONLY WORKS IF LEN(RoutesDisatancesList === 1)
-    //console.log('NOMBER OF SAMPLES', numbersOfSamples)
+
     const pathRequest = {
         path: path,
         samples: numbersOfSamples, // You can adjust the number of samples
@@ -590,15 +620,7 @@ function clearAllPolylines() {
     });
     polylinesArray = [];
 }
-/*
-function CheckForBicyclePathsAlongRoute(){
-    //('CHECKING WAA', coordinates)
-    for (i in coordinates){
-        //console.log('WAAAAAA', coordinates[i])
-        checkBicyclePath(coordinates[i].lat, coordinates[i].lng)
-    }
-}
-*/
+
 function convertPolylineToRoute(){
 
 }
@@ -617,3 +639,14 @@ setTimeout(run, 1000)
 
 
 //key page: AIzaSyAG8M_Uhho1glaT4N1MRY3ZsaNkywROGTk
+
+
+
+//Different forms of bikepath to add:
+//route=bicycle
+//bicycle=yes
+//bicycle=designated
+//
+
+
+//surface and smoothness
