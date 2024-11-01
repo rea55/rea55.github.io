@@ -10,6 +10,8 @@ let chosenlng = 0;
 const searchBar = document.getElementById('searchBar');     //the search Bar
 const markers = {};             //An Array of all the Markers
 
+const throbber = document.getElementById('throbber');
+
 let finalBikePathsArray = [[], []]    //An Array of the percentage of the route that intersects with different types of bike paths. Geometry: [[percentage1.1, percentage1.2, percentage1.3], [percentage2.1, percentage2.2, percentage2.3], ...]
 
 let TrafficLightIntersectionList = [] //A list of the number of traffic lights that intersect with the route
@@ -301,6 +303,9 @@ function initMap() {
 }
 
 function ChooseAAsButton(elevationService) {
+    if (throbber) {
+        throbber.style.display = 'block'; 
+    }
     ResetVars()
     if (chosenlat == 0 && chosenlng == 0) {
         lat1 = 47.367194;
@@ -315,6 +320,9 @@ function ChooseAAsButton(elevationService) {
 }
 
 function ChooseBAsButton(elevationService) {
+    if (throbber) {
+        throbber.style.display = 'block'; // or 'inline' or 'inline-block'
+    }
     ResetVars()
     if (chosenlat == 0 && chosenlng == 0) {
         lat2 = 47.366389;
@@ -485,6 +493,11 @@ function checkForOSMBikepaths(PolylineCoords) {
 function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePathsArray, TrafficLightIntersectionList, index) {
     const ratingItem = document.createElement('p');
     // Check if finalBikePathsArray[1] and finalBikePathsArray[0] are defined
+
+    // Hide the throbber element
+    if (throbber) {
+        throbber.style.display = 'none';
+    }
 
     ratingItem.innerText = `${RouteNames[index]}: \n 
         Distance: ${routeDistance.toFixed(2)} meters\n
