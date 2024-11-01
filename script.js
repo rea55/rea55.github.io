@@ -33,6 +33,9 @@ const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';    //Th
 
 let BikePathsFound = false
 
+let metersuplist = [];
+let metersdownlist = [];
+
 
 
 function ResetVars() {
@@ -71,7 +74,6 @@ function delMarker(name) {                          //deletes a marker by it nam
 }
 
 function intersectTrafficLights(segments, bufferedTrafficLights) {
-    console.log('AWWOOOOOO', segments)
     let numberofTrafficLightIntersections = 0;
 
     outerLoop:
@@ -81,23 +83,20 @@ function intersectTrafficLights(segments, bufferedTrafficLights) {
             const bufferedSegment = turf.buffer(lineSegment, 0.1, { units: 'meters' });
             const intersection = turf.intersect(bufferedSegment, bufferedLight);
             if (intersection) {
-                console.log("Intersection found between segment and traffic light.");
                 numberofTrafficLightIntersections += 1;
                 continue outerLoop;
             } else {
-                console.log("No intersection found for segment and traffic light.");
             }
         }
     }
     
-    console.log('Number of traffic light intersections:', numberofTrafficLightIntersections);
     TrafficLightIntersectionList.push(numberofTrafficLightIntersections)
+    return TrafficLightIntersectionList;
 }
 
 function checkSegmentOnBikePath(segment, bikePaths, type, bufferSize = 10) {
     totalIntersectionArea = 0; // Initialize totalIntersectionArea here
-    console.log('bikepath', bikePaths);
-    console.log('Checking segment:', segment);
+
 
     // Validate segment
     if (!Array.isArray(segment) || segment.length < 2) {    
@@ -116,14 +115,11 @@ function checkSegmentOnBikePath(segment, bikePaths, type, bufferSize = 10) {
         validsegment[i].shift();
     }
     const lineSegment = turf.lineString(validsegment);
-    //console.log("GeoJSON segment:", JSON.stringify(lineSegment, null, 2)); // Log GeoJSON format of the segment
 
     // Buffer the segment to create a polygon around it
     const bufferedSegment = turf.buffer(lineSegment, 0.1, { units: 'meters' });
-    //console.log("Buffered segment:", JSON.stringify(bufferedSegment, null, 2));
 
     const bufferedSegmentArea = turf.area(bufferedSegment);
-    //console.log(`Area of buffered segment: ${bufferedSegmentArea.toFixed(2)} square meters`);
 
     let totalIntersectingLength = 0; // Initialize totalIntersectingLength here
 
@@ -140,25 +136,19 @@ function checkSegmentOnBikePath(segment, bikePaths, type, bufferSize = 10) {
             parseFloat(coord.lat)
         ]);
 
-        //console.log('Coordinates UwU:', coordinates, path);
-
         if (coordinates.length === 0) {
             console.error("Empty bike path coordinates:", path);
             continue;
         }
 
         const bikePath = turf.lineString(coordinates);
-        //console.log("GeoJSON bike path:", JSON.stringify(bikePath, null, 2));
 
         // Buffer the bike path (optional for tolerance)
         const bufferedBikePath = turf.buffer(bikePath, bufferSize, { units: 'meters' });
-        //console.log("Buffered bike path:", JSON.stringify(bufferedBikePath, null, 2));
 
         // Check if the buffered segment intersects with the buffered bike path
         const intersection = turf.intersect(bufferedSegment, bufferedBikePath);
         if (intersection) {
-            //console.log("GeoJSON intersection:", JSON.stringify(intersection, null, 2));
-            console.log("Intersection found between segment and bike path.");
             const intersectionLength = turf.length(intersection, { units: 'meters' });
             totalIntersectingLength += intersectionLength;
 
@@ -167,7 +157,6 @@ function checkSegmentOnBikePath(segment, bikePaths, type, bufferSize = 10) {
             totalIntersectionArea += intersectionArea;
             
         } else {
-            console.log("No intersection found for segment.");
             continue; // Skip to the next path
         }
     }
@@ -175,11 +164,6 @@ function checkSegmentOnBikePath(segment, bikePaths, type, bufferSize = 10) {
     const percentageIntersecting = (totalIntersectingLength / totalSegmentLength) * 100;
     percentageIntersectingArea = ((totalIntersectionArea/bufferedSegmentArea)*100)
     percentageIntersectingAreaList.push(percentageIntersectingArea)
-    //console.log('BOOP', totalSegmentLength, totalIntersectingLength)
-    //console.log(`Percentage of segment intersecting with bike paths: ${percentageIntersecting.toFixed(2)}%`);
-    //console.log(`Percentage of segment areaintersecting with bike paths: ${percentageIntersectingArea.toFixed(2)}%`);
-    //console.log(`Total area of intersections: ${totalIntersectionArea.toFixed(2)} square meters`);
-    //console.log('PERCENTAGE', percentageIntersectingAreaList)
 
     if (percentageIntersectingAreaList.length == polylinesArray.length) {
         if (type == 'highway=cycleway' ){
@@ -187,13 +171,10 @@ function checkSegmentOnBikePath(segment, bikePaths, type, bufferSize = 10) {
         } else if (type == 'bicycle=yes' ){
             finalBikePathsArray[1] = percentageIntersectingAreaList
         }
-        console.log('FINAL', finalBikePathsArray, type)
         percentageIntersectingAreaList = []
     }
+    return finalBikePathsArray;
 }
-
-
-
 
 function initMap() {
     var directionsService = new google.maps.DirectionsService();
@@ -321,8 +302,13 @@ function initMap() {
 
 function ChooseAAsButton(elevationService) {
     ResetVars()
-    lat1 = chosenlat;
-    lng1 = chosenlng;
+    if (chosenlat == 0 && chosenlng == 0) {
+        lat1 = 47.367194;
+        lng1 = 8.545139;
+    } else {
+        lat1 = chosenlat;
+        lng1 = chosenlng;
+    }
     delMarker('Startpoint');
     addMarker('Startpoint', lat1, lng1, 'A');
     fetchRouteAndRender(elevationService);
@@ -330,8 +316,13 @@ function ChooseAAsButton(elevationService) {
 
 function ChooseBAsButton(elevationService) {
     ResetVars()
-    lat2 = chosenlat;
-    lng2 = chosenlng;
+    if (chosenlat == 0 && chosenlng == 0) {
+        lat2 = 47.366389;
+        lng2 = 8.541444;
+    } else {    
+        lat2 = chosenlat;
+        lng2 = chosenlng;
+    }
     delMarker('Endpoint');
     addMarker('Endpoint', lat2, lng2, 'B');
     fetchRouteAndRender(elevationService);
@@ -360,9 +351,6 @@ function scrolltotop() {
     }
 }
 
-
-
-
 async function getBikePaths(bbox, type) {
     const query = `
     [out:json];
@@ -380,7 +368,6 @@ async function getBikePaths(bbox, type) {
     }
     
 }
-
 
 function drawBoundaryBoxForOSMCheck(bottom_left, top_right){
 
@@ -410,10 +397,8 @@ function drawBoundaryBoxForOSMCheck(bottom_left, top_right){
 }
 
 function findAndCheckBikePaths(type, bbox, segments) {
-    console.log('Finding bike paths of type:', type);
     return getBikePaths(bbox, type).then(data => {
         if (data.elements.length == 0){
-            console.log('No bike paths found for type:', type);
             BikePathsFound = false
             if (type == 'highway=cycleway' ){
                 finalBikePathsArray[0].push(0)
@@ -423,13 +408,11 @@ function findAndCheckBikePaths(type, bbox, segments) {
             //the following problem: if there are no bike paths found, the function will not be called again, so the finalBikePathsArray will not be filled with the percentage of the route that intersects with the bike paths
         }
         else{
-            console.log('length', data.elements.length)
             BikePathsFound = true
             checkSegmentOnBikePath(segments, data.elements, type)
         }
     });
 }
-
 
 async function getTrafficLights(bbox, segments) {   //Function to get the traffic lights in a certain area  
     const query = `
@@ -437,11 +420,9 @@ async function getTrafficLights(bbox, segments) {   //Function to get the traffi
     node[highway=traffic_signals](${bbox[0]}, ${bbox[1]}, ${bbox[2]}, ${bbox[3]});
     out geom;
     `; 
-    const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
-    console.log('traffic lights url:', url);   
+    const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;   
     try {
         const response = await axios.get(url);
-        console.log('Traffic lights:', response.data.elements);
         checkTrafficLights(response.data.elements, segments);
         return response.data.elements;
     } catch (error) {
@@ -456,7 +437,6 @@ function checkTrafficLights(trafficLights, segments) {
     for (const light of trafficLights) {
         const lat = light.lat;
         const lon = light.lon;
-        console.log(`Traffic light at latitude ${lat} and longitude ${lon}`);
 
         // Create a point for the traffic light
         const point = turf.point([lon, lat]);
@@ -502,10 +482,32 @@ function checkForOSMBikepaths(PolylineCoords) {
     getTrafficLights(bbox,segments);
 }
 
+function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePathsArray, TrafficLightIntersectionList, index) {
+    const ratingItem = document.createElement('p');
+    // Check if finalBikePathsArray[1] and finalBikePathsArray[0] are defined
+
+    ratingItem.innerText = `${RouteNames[index]}: \n 
+        Distance: ${routeDistance.toFixed(2)} meters\n
+        Elevation Gain: ${metersuplist[index].toFixed(2)} meters\n
+        Elevation Loss: ${metersdownlist[index].toFixed(2)} meters\n
+        highway=cycleway: ${finalBikePathsArray[0][index].toFixed(2)}%\n
+        bicycle=yes: ${finalBikePathsArray[1][index].toFixed(2)}%\n
+        traffic lights: ${TrafficLightIntersectionList[index]}\n`;
+    ratingsList.appendChild(ratingItem);
     
+}  
 
-
-function fetchRouteAndRender(elevationService) {
+function fetchRouteAndRender(elevationService, retryCount = 10) {
+    if (lat1 == 0 || lng1 == 0) {
+        console.error('No start point selected, resetting to default');
+        lat1 = chosenlat;
+        lng1 = chosenlng;
+    }
+    if (lat2 == 0 || lng2 == 0) {
+        console.error('No end point selected, resetting to default');
+        lat2 = chosenlat;
+        lng2 = chosenlng;
+    }
     const requestData = {
         origin: {
             location: {
@@ -529,7 +531,6 @@ function fetchRouteAndRender(elevationService) {
         units: 'METRIC',  // Correct
     };
     
-
     fetch(url, {
         method: 'POST',
         headers: {
@@ -541,6 +542,11 @@ function fetchRouteAndRender(elevationService) {
     })
     .then((response) => response.json())
     .then((data) => {
+
+        if (!data.routes || data.routes.length === 0) {
+            throw new Error('No routes found in the response');
+        }
+
         // Clear existing polylines and ratings list
         clearAllPolylines();
         ratingsList.innerHTML = '';
@@ -550,18 +556,13 @@ function fetchRouteAndRender(elevationService) {
 
         polylines.forEach((polyline, index) => {
             const decodedPolyline = google.maps.geometry.encoding.decodePath(polyline);
-            //console.log('POLYSEXUAL', decodedPolyline)
-            let PolylineCoords = []
+            let PolylineCoords = [];
             decodedPolyline.forEach((point, pointIndex) => {
-                PolylineCoords.push([point.lat(), point.lng()])
-                //console.log(`Point ${pointIndex}: Latitude = ${point.lat()}, Longitude = ${point.lng()}`);
-            });  
-            
+                PolylineCoords.push([point.lat(), point.lng()]);
+            });
             const routeDistance = data.routes[index].distanceMeters;
             RoutesDistancesList.push(routeDistance);
-            
 
-            
             const routePolyline = new google.maps.Polyline({
                 path: decodedPolyline,
                 geodesic: true,
@@ -569,79 +570,47 @@ function fetchRouteAndRender(elevationService) {
                 strokeOpacity: 1.0,
                 strokeWeight: 2,
             });
-        
+
             routePolyline.setMap(map);
             polylinesArray.push(routePolyline); // Store the polyline in the array
 
             // Fetch elevation data for the route
             fetchElevationData(elevationService, decodedPolyline, index);
-            
+
             checkForOSMBikepaths(PolylineCoords);
-
-            setTimeout(() => {
-                const ratingItem = document.createElement('p');
-                console.log('agag', metersuplist, finalBikePathsArray); // Debugging log
-
-                // Check if finalBikePathsArray[1] and finalBikePathsArray[0] are defined
-                if (finalBikePathsArray[1] && finalBikePathsArray[1][index] !== undefined && finalBikePathsArray[0] && finalBikePathsArray[0][index] !== undefined) {
-                    ratingItem.innerText = `${RouteNames[index]}: \n 
-                    Distance: ${routeDistance.toFixed(2)} meters\n
-                    Elevation Gain: ${metersuplist[index].toFixed(2)} meters\n
-                    Elevation Loss: ${metersdownlist[index].toFixed(2)} meters\n
-                    highway=cycleway: ${finalBikePathsArray[0][index].toFixed(2)}%\n
-                    bicycle=yes: ${finalBikePathsArray[1][index].toFixed(2)}%\n
-                    traffic lights: ${TrafficLightIntersectionList[index]}\n`;
-                } else if (finalBikePathsArray[0] && finalBikePathsArray[0][index] !== undefined) {
-                    ratingItem.innerText = `${RouteNames[index]}: \n 
-                    Distance: ${routeDistance.toFixed(2)} meters\n
-                    Elevation Gain: ${metersuplist[index].toFixed(2)} meters\n
-                    Elevation Loss: ${metersdownlist[index].toFixed(2)} meters\n
-                    highway=cycleway: ${finalBikePathsArray[0][index].toFixed(2)}%\n
-                    bicycle=yes: Data not available\n
-                    traffic lights: ${TrafficLightIntersectionList[index]}\n`;
-                } else {
-                    ratingItem.innerText = `${RouteNames[index]}: \n 
-                    Distance: ${routeDistance.toFixed(2)} meters\n
-                    Elevation Gain: ${metersuplist[index].toFixed(2)} meters\n
-                    Elevation Loss: ${metersdownlist[index].toFixed(2)} meters\n
-                    highway=cycleway: Data not available\n
-                    bicycle=yes: Data not available\n
-                    traffic lights: ${TrafficLightIntersectionList[index]}\n`;
-                }
-
-                ratingsList.appendChild(ratingItem);
-            }, 5000); // Ensure the timeout duration is sufficient for async operations
-            
-
         });
-        
-                
-        
     })
-    .catch((error) => console.error('Error:', error));
+    .catch((error) => {
+        console.error('Error:', error);
+        console.error('Request Data:', requestData); // Log the request data for debugging
+
+        if (retryCount > 0) {
+            console.error(`Retrying... (${retryCount + 1})`);
+            setTimeout(() => fetchRouteAndRender(elevationService, retryCount - 1), 3000);
+        } else {
+            console.error('Max retries reached. Could not fetch routes.');
+        }
+    });
 }
 
 function fetchElevationData(elevationService, path, routeIndex) {
-    metersuplist = []
-    metersdownlist =[]
-    //console.log('yaaasass', RoutesDistancesList)
-    numbersOfSamples = Math.round(RoutesDistancesList[0]/100)                                      //WORK ON THIS ONLY WORKS IF LEN(RoutesDisatancesList === 1)
-    //console.log('NOMBER OF SAMPLES', numbersOfSamples)
+    let numbersOfSamples = Math.round(RoutesDistancesList[routeIndex] / 50);
+
+    if (!path || path.length === 0) {
+        console.error('Invalid path data');
+        return;
+    }
+
     const pathRequest = {
         path: path,
         samples: numbersOfSamples, // You can adjust the number of samples
-        
     };
-
 
     elevationService.getElevationAlongPath(pathRequest, (results, status) => {
         if (status === 'OK') {
             if (results) {
-                metersdown = 0
-                metersup = 0
-                //console.log(`Elevation data for route ${routeIndex + 1}:`, results);
-                
-                
+                let metersdown = 0;
+                let metersup = 0;
 
                 // Extract elevation values
                 const elevations = results.map(result => result.elevation);
@@ -649,40 +618,36 @@ function fetchElevationData(elevationService, path, routeIndex) {
                 results.forEach(result => {
                     const location = result.location;
                     coordinates.push({ lat: location.lat(), lng: location.lng() }); // Extract lat and lng
-                  });
-                //console.log('COORD', coordinates)
+                });
 
-
-                lastElevation = elevations[0]
-                for(const value of elevations) {
-                    if (value > (lastElevation)){
-                        metersup = metersup + (value - lastElevation) 
+                let lastElevation = elevations[0];
+                for (const value of elevations) {
+                    if (value > lastElevation) {
+                        metersup += (value - lastElevation);
+                    } else if (value < lastElevation) {
+                        metersdown += (lastElevation - value);
                     }
-                    else if (value < (lastElevation)){
-                        metersdown = metersdown + (lastElevation - value) 
-                    }
+                    lastElevation = value;
                 }
-                //console.log('up', metersup, 'down', metersdown)
-                metersdownlist.push(metersdown)
-                metersuplist.push(metersup)
 
+                metersdownlist[routeIndex] = metersdown / 10;
+                metersuplist[routeIndex] = metersup / 10;
 
-
+                // Check if finalBikePathsArray is defined and call displayRatings
+                if (finalBikePathsArray[0].length > 0 && finalBikePathsArray[1].length > 0) {
+                    displayRatings(RoutesDistancesList[routeIndex], metersuplist, metersdownlist, finalBikePathsArray, TrafficLightIntersectionList, routeIndex);
+                } else {
+                    // Retry after a short delay if finalBikePathsArray is not defined yet
+                    setTimeout(() => fetchElevationData(elevationService, path, routeIndex), 1000);
+                }
             } else {
                 console.error('No elevation results found');
             }
         } else {
             console.error('Elevation service failed due to:', status);
         }
-
-    //window.setTimeout(() => CheckForBicyclePathsAlongRoute(), 200);
-
-
     });
-    
-    
 }
-
 
 function clearAllPolylines() {
     polylinesArray.forEach((polyline) => {
@@ -690,21 +655,6 @@ function clearAllPolylines() {
     });
     polylinesArray = [];
 }
-/*
-function CheckForBicyclePathsAlongRoute(){
-    //('CHECKING WAA', coordinates)
-    for (i in coordinates){
-        //console.log('WAAAAAA', coordinates[i])
-        checkBicyclePath(coordinates[i].lat, coordinates[i].lng)
-    }
-}
-*/
-function convertPolylineToRoute(){
-
-}
-
-
-
 
 const width_of_map_container = document.querySelector('#map_container').offsetWidth;
 searchBar.style.width = `${width_of_map_container}px`;
