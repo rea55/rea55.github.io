@@ -30,7 +30,7 @@ let routeColors = ['#FF0000', '#000000', '#0000FF']; // Red, Black, Blue
 
 let RouteNames = ['Red', 'Black', 'Blue']; //A list of the names of all the routes which will be displayed in the "Ratings" part of the HTML
 
-const apiKey = 'AIzaSyAG8M_Uhho1glaT4N1MRY3ZsaNkywROGTk';   //my google maps API key
+const apiKey = 'DELETED DUE TO BILLING ISSUES';   //my google maps API key
 const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';    //The link that is used to make a request to google maps to compute the routes
 
 let BikePathsFound = false
@@ -679,7 +679,7 @@ window.initMap = initMap;
 setTimeout(run, 1000)
 
 
-//key page: AIzaSyAG8M_Uhho1glaT4N1MRY3ZsaNkywROGTk
+//key page: REDACTED
 
 
 
