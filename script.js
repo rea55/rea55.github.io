@@ -30,7 +30,7 @@ let routeColors = ['#FF0000', '#000000', '#0000FF']; // Red, Black, Blue
 
 let RouteNames = ['Red', 'Black', 'Blue']; //A list of the names of all the routes which will be displayed in the "Ratings" part of the HTML
 
-const apiKey = 'AIzaSyAG8M_Uhho1glaT4N1MRY3ZsaNkywROGTk';   //my google maps API key
+const apiKey = 'AIzaSyBZTAGfUNYnmAy7GgEoOwJbzK7livB-o14';   //my google maps API key
 const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';    //The link that is used to make a request to google maps to compute the routes
 
 let BikePathsFound = false
@@ -491,7 +491,7 @@ function updateWeights(name, value) {
             weight_traffic_lights = parseFloat(value);
             break;
     }
-    for(let i = 0; i < RoutesDistancesList.length; i++){
+        for(let i = 0; i < RoutesDistancesList.length; i++){
         displayRatings(RoutesDistancesList[i], metersuplist, metersdownlist, finalBikePathsArray, TrafficLightIntersectionList, i);
     }
 }
@@ -674,6 +674,8 @@ function checkForOSMBikepaths(PolylineCoords, routeIndex) {
 
 function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePathsArray, TrafficLightIntersectionList, index) {
     console.log('displayRatings')
+    ratinglist.innerHTML = '';
+
     return new Promise((resolve, reject) => {
         try {
             // Hide the throbber element
