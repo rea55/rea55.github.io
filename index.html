@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bikemap</title> 
-  <link rel="stylesheet" type="text/css" href="style.css"/>
+  <link rel="stylesheet" type="text/css" href="style2.css"/>
   <link rel="icon" href="https://media.geeksforgeeks.org/wp-content/cdn-uploads/gfg_200X200.png" type="image/x-icon" />
 </head>
 <body>
@@ -13,10 +13,8 @@
   <div id="title">
     <div id="logo">
     <a href="https://ibb.co/NtLLbXH"><img src="https://i.ibb.co/JmzzgNM/Bikemaplogo1.jpg" alt="Bikemaplogo1" id="title_logo"></a>
-  </div>
-  <div id="VersionInfo">
-    <h3>VERSION 2.1</h3>
-  </div>
+
+    </div>
     <div id="otherlinks">
       <button class="otherlinks_button" id="HowToUseBTN">How to use</button>
       <button class="otherlinks_button" id="AboutMeBTN">About me</button>
@@ -25,19 +23,96 @@
     </div>
   </div>
   <div id="title_placeholder">
-
+    <h3>VERSION 3.0</h3>
   </div>
   <div id="settings">
   </div>
-  <h1>THE APPLICATION WAS SHUT OFF SHORT TERM. IT WILL BE RUNNING AGAIN SOON</h1>
   <div id="map_container">
     <div id="map"></div>
   </div>
-  <div id="Ratings_Container">
+  
   <h1>Ratings:</h1>
-  <div id="Ratings_List"></div>
-  <div class="throbber", id="throbber"></div>
-</div>
+  <div id="Ratings_Container" class="Ratings_Container">
+
+    <div class="rangeInputs">
+      <label for="DistanceCheck">Turn off/on </label>
+      <input type="checkbox" id="DistanceCheck"  checked />
+      <input type="range" id="Distance" name="Distance" min="0" max="100" />
+      <label for="Distance" >Distance</label>
+      <br>
+      <br>
+      <label for="ElevationGainCheck">Turn off/on </label>
+      <input type="checkbox" id="ElevationGainCheck"  checked />
+      <input type="range" id="ElevationGain" name="ElevationGain" min="0" max="100"/>
+      <label for="ElevationGain">Elevation Gain</label>
+      <br>
+      <br>
+      <label for="ElevationLossCheck">Turn off/on </label>
+      <input type="checkbox" id="ElevationLossCheck"  checked />
+      <input type="range" id="ElevationLoss" name="ElevationLoss" min="0" max="100" />
+      <label for="ElevationLoss">Elevation Loss</label>
+      <br>
+      <br>
+      <label for="highway=cyclewayCheck">Turn off/on </label>
+      <input type="checkbox" id="highway=cyclewayCheck"  checked />
+      <input type="range" id="highway=cycleway" name="highway=cycleway" min="0" max="100" />
+      <label for="highway=cycleway">Cycleway</label>
+      <br>
+      <br>
+      <label for="bicycle=yesCheck">Turn off/on </label>
+      <input type="checkbox" id="bicycle=yesCheck"  checked />
+      <input type="range" id="bicycle=yes" name="bicycle=yes" min="0" max="100" />
+      <label for="bicycle=yes">Bicycle</label>
+      <br>
+      <br>
+      <label for="trafficLightsCheck">Turn off/on </label>
+      <input type="checkbox" id="trafficLightsCheck"  checked />
+      <input type="range" id="trafficLights" name="trafficLights" min="0" max="100" />
+      <label for="trafficLights">Traffic Lights</label>
+      <br>
+      <br>
+      <label for="surface=pavedCheck">Turn off/on </label>
+      <input type="checkbox" id="surface=pavedCheck"  checked />
+      <input type="range" id="surface=paved" name="surface=paved" min="0" max="100" />
+      <label for="surface=paved">Surface Paved</label>
+      <br>
+      <br> 
+      <label for="surface=asphaltCheck">Turn off/on </label>
+      <input type="checkbox" id="surface=asphaltCheck"  checked /> 
+      <input type="range" id="surface=asphalt" name="surface=asphalt" min="0" max="100" />
+      <label for="surface=asphalt">Surface Asphalt</label>
+      <br>
+      <br>
+      <label for="route=bicycleCheck">Turn off/on </label>
+      <input type="checkbox" id="route=bicycleCheck"  checked />
+      <input type="range" id="route=bicycle" name="route=bicycle" min="0" max="100" />
+      <label for="route=bicycle">Route Bicycle</label>
+      <br>
+      <br>
+      <label for="bicycle=designatedCheck">Turn off/on </label>
+      <input type="checkbox" id="bicycle=designatedCheck"  checked />
+      <input type="range" id="bicycle=designated" name="bicycle=designated" min="0" max="100" />
+      <label for="bicycle=designated">Bicycle Designated</label>
+      <br>
+      <br>
+      <label for="surface=concreteCheck">Turn off/on </label>
+      <input type="checkbox" id="surface=concreteCheck"  checked />
+      <input type="range" id="surface=concrete" name="surface=concrete" min="0" max="100" />
+      <label for="surface=concrete">Surface Concrete</label>
+      <br>
+      <br>
+      <label for="surface=settCheck">Turn off/on </label>
+      <input type="checkbox" id="surface=settCheck"  checked />
+      <input type="range" id="surface=sett" name="surface=sett" min="0" max="100" />
+      <label for="surface=sett">Surface Sett</label>
+      <br>
+    </div>
+    <div id="Ratings_List">
+    </div>
+    <div class="throbber" id="throbber">
+    </div>
+  </div>
+
 
   <div id="HowToUse">
     <h1>How to use</h1>
@@ -45,6 +120,10 @@
   </div>
   <div id="AboutMe">
     <h1>About me</h1>
+    <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Quo, facilis repellat temporibus error porro et blanditiis maiores itaque ex excepturi eum voluptates alias debitis sunt obcaecati magnam consequuntur, iste dolore.</p>
+  </div>
+  <div id="HowItWorks">
+    <h1>How it works</h1>
     <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Quo, facilis repellat temporibus error porro et blanditiis maiores itaque ex excepturi eum voluptates alias debitis sunt obcaecati magnam consequuntur, iste dolore.</p>
   </div>
   <div id="Contact">
@@ -68,10 +147,9 @@
 
 
 
-  <script  src="script.js" defer></script>
-
+  <script  src="script2.js" defer></script>
   <script async defer
-    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAG8M_Uhho1glaT4N1MRY3ZsaNkywROGTk&libraries=geometry,places&callback=initMap">
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBZTAGfUNYnmAy7GgEoOwJbzK7livB-o14&libraries=geometry,places&callback=initMap">
   </script>
 
 
