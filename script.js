@@ -10,6 +10,18 @@ let chosenlng = 0;
 const searchBar = document.getElementById('searchBar');     //the search Bar
 const markers = {};             //An Array of all the Markers
 
+let weight_Distance = (parseFloat(document.getElementById('Distance').value));
+let weight_Elevation_Gain = parseFloat(document.getElementById('ElevationGain').value);
+let weight_Elevation_Loss = parseFloat(document.getElementById('ElevationGain').value);
+let weight_highway_cycleway = parseFloat(document.getElementById('highway=cycleway').value);
+let weight_bicycle_yes = parseFloat(document.getElementById('highway=cycleway').value);
+let weight_surface_paved = parseFloat(document.getElementById('surface=paved').value);
+let weight_surface_asphalt = parseFloat(document.getElementById('surface=paved').value);
+let weight_route_bicycle = parseFloat(document.getElementById('highway=cycleway').value);
+let weight_bicycle_designated = parseFloat(document.getElementById('highway=cycleway').value);
+let weight_surface_concrete = parseFloat(document.getElementById('surface=paved').value);
+let weight_surface_sett = parseFloat(document.getElementById('surface=paved').value);
+let weight_traffic_lights = parseFloat(document.getElementById('trafficLights').value);
 const throbber = document.getElementById('throbber');
 
 let finalBikePathsArray = [[], [], [], [], [], [], [], [], [69, 69, 69]];
@@ -40,18 +52,6 @@ var oneRoute = true;
 let metersuplist = [];
 let metersdownlist = [];
 
-let weight_Distance = 0.5;
-let weight_Elevation_Gain = 0.5;
-let weight_Elevation_Loss = 0.5;
-let weight_highway_cycleway = 0.5;
-let weight_bicycle_yes = 0.5;
-let weight_surface_paved = 0.5;
-let weight_surface_asphalt = 0.5;
-let weight_route_bicycle = 0.5;
-let weight_bicycle_designated = 0.5;
-let weight_surface_concrete = 0.5;
-let weight_surface_sett = 0.5;
-let weight_traffic_lights = 0.5;
 
 var Distance_ratingList = [];
 var Elevation_Gain_ratingList = [];
@@ -68,6 +68,10 @@ var traffic_lights_ratingList = [];
 
 var finalRatingList = []; 
 
+var BikepathsRatingsList = [];
+var SurfaceRatingsList = [];
+var ElevationRatingsList = [];
+
 
 function ResetVars() {
     coordinates = [];
@@ -81,6 +85,8 @@ function ResetVars() {
     BikePathsFound = false;
     clearAllPolylines();
     //ratingsList.innerHTML = '';
+    BikepathsRatingsList = [];
+    SurfaceRatingsList = [];
 }
 
 function addMarker(name, lat, lng, Label) {
@@ -116,6 +122,29 @@ function delMarker(name) {                          //deletes a marker by it nam
     }
 }
 
+function transposeLists(listspos, listsneg, resultinglist) {
+    console.log('transposing')
+    let noneg = false;
+    let transposedpos = listspos[0].map((_, colIndex) => listspos.map(row => row[colIndex]));
+    if (listsneg.length == []) {
+        noneg = true
+    }
+    else {
+        let transposedneg = listsneg[0].map((_, colIndex) => listsneg.map(row => row[colIndex]));
+    }
+    console.log('noneg=', noneg)
+    for (let i = 0; i < transposedpos.length; i++) {
+        let numerator = transposedpos[i].filter(value => !isNaN(value)).reduce((a, b) => a + b, 0);
+
+        if (noneg) {
+            denominator = 1;
+        } else{
+            let denominator = transposedneg[i].filter(value => !isNaN(value)).reduce((a, b) => a + b, 0);
+        }
+        resultinglist.push(numerator / denominator);
+    }
+}
+
 function intersectTrafficLights(segments, bufferedTrafficLights) {
     let numberofTrafficLightIntersections = 0;
 
@@ -138,128 +167,131 @@ function intersectTrafficLights(segments, bufferedTrafficLights) {
 }
 
 function checkSegmentOnBikePath(segment, bikePaths, type, bufferSize = 10) {
-    return new Promise((resolve, reject) => {
-        totalIntersectionArea = 0; // Initialize totalIntersectionArea here
+    totalIntersectionArea = 0; // Initialize totalIntersectionArea here
 
-        // Validate segment
-        if (!Array.isArray(segment) || segment.length < 2) {
-            console.error("Invalid segment:", segment);
-            return resolve(false);
+    // Validate segment
+    if (!Array.isArray(segment) || segment.length < 2) {
+        console.error("Invalid segment:", segment);
+        return false;
+    }
+
+    // Ensure segment coordinates are numbers
+    const validsegment = [segment[0][0]];
+    for (let i = 0; i < segment.length; i++) {
+        validsegment.push(segment[i][1]);
+    }
+
+    for (let i = 0; i < validsegment.length; i++) {
+        validsegment[i].push(validsegment[i][0]);
+        validsegment[i].shift();
+    }
+    const lineSegment = turf.lineString(validsegment);
+
+    // Buffer the segment to create a polygon around it
+    const bufferedSegment = turf.buffer(lineSegment, 0.1, { units: 'meters' });
+
+    const bufferedSegmentArea = turf.area(bufferedSegment);
+
+    let totalIntersectingLength = 0; // Initialize totalIntersectingLength here
+
+    for (const path of bikePaths) {
+        // Validate bike path geometry
+        if (!path.geometry || !Array.isArray(path.geometry)) {
+            console.error("Invalid path geometry:", path);
+            continue; // Skip to the next path
         }
 
-        // Ensure segment coordinates are numbers
-        const validsegment = [segment[0][0]];
-        for (let i = 0; i < segment.length; i++) {
-            validsegment.push(segment[i][1]);
+        // Ensure bike path coordinates are numbers and in [lon, lat] order
+        const coordinates = path.geometry.map(coord => [
+            parseFloat(coord.lon),
+            parseFloat(coord.lat)
+        ]);
+
+        if (coordinates.length === 0) {
+            console.error("Empty bike path coordinates:", path);
+            continue;
+        }  
+
+        const bikePath = turf.lineString(coordinates);
+
+        // Buffer the bike path (optional for tolerance)
+        const bufferedBikePath = turf.buffer(bikePath, bufferSize, { units: 'meters' });
+
+        // Check if the buffered segment intersects with the buffered bike path
+        const intersection = turf.intersect(bufferedSegment, bufferedBikePath);
+        if (intersection) {
+            const intersectionLength = turf.length(intersection, { units: 'meters' });
+            totalIntersectingLength += intersectionLength;
+
+            // Calculate the area of the intersection and add to totalIntersectionArea
+            const intersectionArea = turf.area(intersection);
+            totalIntersectionArea += intersectionArea;
+
+        } else {
+            continue; // Skip to the next path
+        }
+    }
+    const totalSegmentLength = turf.length(lineSegment, { units: 'meters' });
+    const percentageIntersecting = (totalIntersectingLength / totalSegmentLength) * 100;
+    const percentageIntersectingArea = ((totalIntersectionArea / bufferedSegmentArea) * 100);
+    percentageIntersectingAreaList.push(percentageIntersectingArea);
+    if (percentageIntersectingAreaList.length == polylinesArray.length) {
+        if (type == 'highway=cycleway' && document.getElementById('highway=cyclewayCheck').checked) {
+            finalBikePathsArray[0] = percentageIntersectingAreaList;
+        } else if (type == 'bicycle=yes' && document.getElementById('bicycle=yesCheck').checked) {
+            finalBikePathsArray[1] = percentageIntersectingAreaList;
+        } else if (type == 'surface=paved' && document.getElementById('surface=pavedCheck').checked) {
+            finalBikePathsArray[2] = percentageIntersectingAreaList;
+        } else if (type == 'surface=asphalt' && document.getElementById('surface=asphaltCheck').checked) {
+            finalBikePathsArray[3] = percentageIntersectingAreaList;
+        } else if (type == 'route=bicycle' && document.getElementById('route=bicycleCheck').checked) {
+            finalBikePathsArray[4] = percentageIntersectingAreaList;
+        } else if (type == 'bicycle=designated' && document.getElementById('bicycle=designatedCheck').checked) {
+            finalBikePathsArray[5] = percentageIntersectingAreaList;
+        } else if (type == 'surface=concrete' && document.getElementById('surface=concreteCheck').checked) {
+            finalBikePathsArray[6] = percentageIntersectingAreaList;
+        } else if (type == 'surface=sett' && document.getElementById('surface=settCheck').checked) {
+            finalBikePathsArray[7] = percentageIntersectingAreaList;
         }
 
-        for (let i = 0; i < validsegment.length; i++) {
-            validsegment[i].push(validsegment[i][0]);
-            validsegment[i].shift();
-        }
-        const lineSegment = turf.lineString(validsegment);
+        percentageIntersectingAreaList = [];
 
-        // Buffer the segment to create a polygon around it
-        const bufferedSegment = turf.buffer(lineSegment, 0.1, { units: 'meters' });
-
-        const bufferedSegmentArea = turf.area(bufferedSegment);
-
-        let totalIntersectingLength = 0; // Initialize totalIntersectingLength here
-
-        for (const path of bikePaths) {
-            // Validate bike path geometry
-            if (!path.geometry || !Array.isArray(path.geometry)) {
-                console.error("Invalid path geometry:", path);
-                continue; // Skip to the next path
-            }
-
-            // Ensure bike path coordinates are numbers and in [lon, lat] order
-            const coordinates = path.geometry.map(coord => [
-                parseFloat(coord.lon),
-                parseFloat(coord.lat)
-            ]);
-
-            if (coordinates.length === 0) {
-                console.error("Empty bike path coordinates:", path);
-                continue;
-            }
-
-            const bikePath = turf.lineString(coordinates);
-
-            // Buffer the bike path (optional for tolerance)
-            const bufferedBikePath = turf.buffer(bikePath, bufferSize, { units: 'meters' });
-
-            // Check if the buffered segment intersects with the buffered bike path
-            const intersection = turf.intersect(bufferedSegment, bufferedBikePath);
-            if (intersection) {
-                const intersectionLength = turf.length(intersection, { units: 'meters' });
-                totalIntersectingLength += intersectionLength;
-
-                // Calculate the area of the intersection and add to totalIntersectionArea
-                const intersectionArea = turf.area(intersection);
-                totalIntersectionArea += intersectionArea;
-
-            } else {
-                continue; // Skip to the next path
-            }
-        }
-        const totalSegmentLength = turf.length(lineSegment, { units: 'meters' });
-        const percentageIntersecting = (totalIntersectingLength / totalSegmentLength) * 100;
-        percentageIntersectingArea = ((totalIntersectionArea / bufferedSegmentArea) * 100)
-        percentageIntersectingAreaList.push(percentageIntersectingArea)
-        if (percentageIntersectingAreaList.length == polylinesArray.length) {
-            if (type == 'highway=cycleway' && document.getElementById('highway=cyclewayCheck').checked) {
-                finalBikePathsArray[0] = percentageIntersectingAreaList
-            } else if (type == 'bicycle=yes' && document.getElementById('bicycle=yesCheck').checked) {
-                finalBikePathsArray[1] = percentageIntersectingAreaList
-            } else if (type == 'surface=paved' && document.getElementById('surface=pavedCheck').checked) {
-                finalBikePathsArray[2] = percentageIntersectingAreaList
-            } else if (type == 'surface=asphalt' && document.getElementById('surface=asphaltCheck').checked) {
-                finalBikePathsArray[3] = percentageIntersectingAreaList
-            } else if (type == 'route=bicycle' && document.getElementById('route=bicycleCheck').checked) {
-                finalBikePathsArray[4] = percentageIntersectingAreaList
-            } else if (type == 'bicycle=designated' && document.getElementById('bicycle=designatedCheck').checked) {
-                finalBikePathsArray[5] = percentageIntersectingAreaList
-            } else if (type == 'surface=concrete' && document.getElementById('surface=concreteCheck').checked) {
-                finalBikePathsArray[6] = percentageIntersectingAreaList
-            } else if (type == 'surface=sett' && document.getElementById('surface=settCheck').checked) {
-                finalBikePathsArray[7] = percentageIntersectingAreaList
-            }
-
-            percentageIntersectingAreaList = []
-
-        }
-        else{
-            console.error('Error: percentageIntersectingAreaList is not the same length as polylinesArray, type:', type)
-            checkSegmentOnBikePath(segment, bikePaths, type)
-        }
-        resolve(finalBikePathsArray);
-
-    });
+    } else {
+        //console.error('Error: percentageIntersectingAreaList is not the same length as polylinesArray, type:', type);
+        checkSegmentOnBikePath(segment, bikePaths, type);
+    }
+    return finalBikePathsArray;
 }
+
+function toggleMenu() {
+    const menuContent = document.getElementById('menu-content');
+    if (menuContent.style.display === 'block') {
+        menuContent.style.display = 'none';
+    } else {
+        menuContent.style.display = 'block';
+    }
+}
+
 
 function initMap() {
     var directionsService = new google.maps.DirectionsService();
     var directionsRenderer = new google.maps.DirectionsRenderer();
 
-    //calculateAndDisplayRoute(directionsService, directionsRenderer)
-
     const center = { lat: latcenter, lng: lngcenter };
     map = new google.maps.Map(document.getElementById('map'), {
         center: center,
         zoom: 16,
-        streetViewControl: false, //enable Anubis by turning streetViewControl to TRUE
-        mapTypeControl: false, //enable Sattelite by turning mapTypeControl to TRUE
-        mapTypeControlOptions: {
-            style: google.maps.MapTypeControlStyle.DEFAULT,
-            position: google.maps.ControlPosition.BOTTOM_LEFT
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+        zoomControlOptions: {
+            position: google.maps.ControlPosition.RIGHT_BOTTOM
         }
     });
 
     directionsRenderer.setMap(map);
 
     const bikeLayer = new google.maps.BicyclingLayer();
-
     bikeLayer.setMap(map);
 
     addMarker('Startpoint', lat1, lng1, 'A');
@@ -268,7 +300,6 @@ function initMap() {
     fetchRouteAndRender();
 
     const searchBox = new google.maps.places.SearchBox(searchBar);
-
     map.controls[google.maps.ControlPosition.TOP_LEFT].push(searchBar);
 
     map.addListener('bounds_changed', () => {
@@ -314,19 +345,15 @@ function initMap() {
         map.fitBounds(selectedPlace.geometry.viewport);
     });
 
-    // Create the button for 'Choose As B'
-    const chooseBButton = document.createElement('button');
-    chooseBButton.textContent = 'Choose As B';
-    chooseBButton.classList.add('custom-map-control-button');
-    map.controls[google.maps.ControlPosition.TOP_RIGHT].push(chooseBButton);
-    chooseBButton.addEventListener('click', () => ChooseBAsButton());
+    // Add the hamburger menu to the map controls
+    const hamburgerMenu = document.getElementById('hamburger-menu');
+    map.controls[google.maps.ControlPosition.TOP_RIGHT].push(hamburgerMenu);
 
-    // Create the button for 'Choose As A'
-    const chooseAButton = document.createElement('button');
-    chooseAButton.textContent = 'Choose As A';
-    chooseAButton.classList.add('custom-map-control-button');
-    map.controls[google.maps.ControlPosition.TOP_RIGHT].push(chooseAButton);
-    chooseAButton.addEventListener('click', () => ChooseAAsButton());
+    // Add the new buttons to the map controls
+    const chooseAButton = document.getElementById('chooseAButton');
+    const chooseBButton = document.getElementById('chooseBButton');
+    map.controls[google.maps.ControlPosition.LEFT_TOP].push(chooseAButton);
+    map.controls[google.maps.ControlPosition.LEFT_TOP].push(chooseBButton);
 
     const HowToUseBTN = document.getElementById('HowToUseBTN');
     const AboutMeBTN = document.getElementById('AboutMeBTN');
@@ -344,7 +371,7 @@ function initMap() {
         let opacity = 0;
         if (scrollPosition < 100) {
             opacity = scrollPosition / 100; // Gradual increase from 0 to 1
-        } else {
+        } else { 
             opacity = 1; // Full opacity after 100 pixels of scroll
         }
 
@@ -423,8 +450,11 @@ document.addEventListener('DOMContentLoaded', (event) => {
         
         // Add event listener to log the value when it changes
         input.addEventListener('input', (event) => {
+            console.log(event.target.name, event.target.value)
             updateWeights(event.target.name, event.target.value);
+
         });
+        
     });
 
 
@@ -434,6 +464,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 });
 
 function calculateRating(Valuelist, weight, ratinglist) {
+
     var ratingPreWeight = 0;
     var ratingPostWeight = 0;
     const min = Math.min(...Valuelist);
@@ -446,54 +477,109 @@ function calculateRating(Valuelist, weight, ratinglist) {
         }
         ratinglist.push(ratingPostWeight);
     }
+    while (ratinglist.length > RoutesDistancesList.length) {
+        ratinglist.shift();
+    }
+
     return ratingPostWeight;
 
 }
 
+
 function updateWeights(name, value) {
     switch(name) {
         case 'Distance':
+            console.log(name);
             weight_Distance = parseFloat(value);
+            calculateRating(RoutesDistancesList, parseFloat(value), Distance_ratingList);
+            for (let i = 0; i < RoutesDistancesList.length; i++) {
+                appendRatingItem(ratingsList, RoutesDistancesList.length > 0, RoutesDistancesList, i, 'Distance', Distance_ratingList);
+                console.log('b')
+            }
             break;
         case 'ElevationGain':
+            console.log(name);
             weight_Elevation_Gain = parseFloat(value);
-            break;
-        case 'ElevationLoss':
+            calculateRating(metersuplist, parseFloat(value), Elevation_Gain_ratingList);
+            for (let i = 0; i < metersuplist.length; i++) {
+                appendRatingItem(ratingsList, metersuplist.length > 0, metersuplist, i, 'Elevation Gain', Elevation_Gain_ratingList);
+            }
+
             weight_Elevation_Loss = parseFloat(value);
+            calculateRating(metersdownlist, parseFloat(value), Elevation_Loss_ratingList);
+            for (let i = 0; i < metersdownlist.length; i++) {
+                appendRatingItem(ratingsList, metersdownlist.length > 0, metersdownlist, i, 'Elevation Loss', Elevation_Loss_ratingList);
+            }
+
             break;
+
         case 'highway=cycleway':
+            console.log(name);
             weight_highway_cycleway = parseFloat(value);
-            break;
-        case 'bicycle=yes':
+            calculateRating(finalBikePathsArray[0], parseFloat(value), highway_cycleway_ratingList);
+            for (let i = 0; i < finalBikePathsArray[0].length; i++) {
+                appendRatingItem(ratingsList, finalBikePathsArray[0] && finalBikePathsArray[0][i] !== undefined, finalBikePathsArray[0], i, 'highway=cycleway', highway_cycleway_ratingList);
+            }
+
             weight_bicycle_yes = parseFloat(value);
-            break;
-        case 'surface=paved':
-            weight_surface_paved = parseFloat(value);
-            break;
-        case 'surface=asphalt':
-            weight_surface_asphalt = parseFloat(value);
-            break;
-        case 'route=bicycle':
+            calculateRating(finalBikePathsArray[1], parseFloat(value), bicycle_yes_ratingList);
+            for (let i = 0; i < finalBikePathsArray[1].length; i++) {
+                appendRatingItem(ratingsList, finalBikePathsArray[1] && finalBikePathsArray[1][i] !== undefined, finalBikePathsArray[1], i, 'bicycle=yes', bicycle_yes_ratingList);
+            }
+
             weight_route_bicycle = parseFloat(value);
-            break;
-        case 'bicycle=designated':
+            calculateRating(finalBikePathsArray[4], parseFloat(value), route_bicycle_ratingList);
+            for (let i = 0; i < finalBikePathsArray[4].length; i++) {
+                appendRatingItem(ratingsList, finalBikePathsArray[4] && finalBikePathsArray[4][i] !== undefined, finalBikePathsArray[4], i, 'route=bicycle', route_bicycle_ratingList);
+            }
+
             weight_bicycle_designated = parseFloat(value);
+            calculateRating(finalBikePathsArray[5], parseFloat(value), bicycle_designated_ratingList);
+            for (let i = 0; i < finalBikePathsArray[5].length; i++) {
+                appendRatingItem(ratingsList, finalBikePathsArray[5] && finalBikePathsArray[5][i] !== undefined, finalBikePathsArray[5], i, 'bicycle=designated', bicycle_designated_ratingList);
+            }
+
             break;
-        case 'surface=concrete':
+
+        case 'surface=paved':
+            console.log(name);
+            weight_surface_paved = parseFloat(value);
+            calculateRating(finalBikePathsArray[2], parseFloat(value), surface_paved_ratingList);
+            for (let i = 0; i < finalBikePathsArray[2].length; i++) {
+                appendRatingItem(ratingsList, finalBikePathsArray[2] && finalBikePathsArray[2][i] !== undefined, finalBikePathsArray[2], i, 'surface=paved', surface_paved_ratingList);
+            }
+
+            weight_surface_asphalt = parseFloat(value);
+            calculateRating(finalBikePathsArray[3], parseFloat(value), surface_asphalt_ratingList);
+            for (let i = 0; i < finalBikePathsArray[3].length; i++) {
+                appendRatingItem(ratingsList, finalBikePathsArray[3] && finalBikePathsArray[3][i] !== undefined, finalBikePathsArray[3], i, 'surface=asphalt', surface_asphalt_ratingList);
+            }
+
             weight_surface_concrete = parseFloat(value);
-            break;
-        case 'surface=sett':
+            calculateRating(finalBikePathsArray[6], parseFloat(value), surface_concrete_ratingList);
+            for (let i = 0; i < finalBikePathsArray[6].length; i++) {
+                appendRatingItem(ratingsList, finalBikePathsArray[6] && finalBikePathsArray[6][i] !== undefined, finalBikePathsArray[6], i, 'surface=concrete', surface_concrete_ratingList);
+            }
+
             weight_surface_sett = parseFloat(value);
+            calculateRating(finalBikePathsArray[7], parseFloat(value), surface_sett_ratingList);
+            for (let i = 0; i < finalBikePathsArray[7].length; i++) {
+                appendRatingItem(ratingsList, finalBikePathsArray[7] && finalBikePathsArray[7][i] !== undefined, finalBikePathsArray[7], i, 'surface=sett', surface_sett_ratingList);
+            }
+
             break;
+
         case 'trafficLights':
+            console.log(name);
             weight_traffic_lights = parseFloat(value);
+            calculateRating(TrafficLightIntersectionList, parseFloat(value), traffic_lights_ratingList);
+            for (let i = 0; i < TrafficLightIntersectionList.length; i++) {
+                appendRatingItem(ratingsList, TrafficLightIntersectionList.length > 0, TrafficLightIntersectionList, i, 'Traffic lights', traffic_lights_ratingList);
+            }
             break;
+        default:
+            console.error('Invalid input:', name, value);
     }
-    /*
-    for(let i = 0; i < RoutesDistancesList.length; i++){
-        displayRatings(RoutesDistancesList[i], metersuplist, metersdownlist, finalBikePathsArray, TrafficLightIntersectionList, i);
-    }
-        */
 }
 
 async function getBikePaths(bbox, type) {
@@ -527,34 +613,22 @@ async function getBikePaths(bbox, type) {
     }
 }
 
-function drawBoundaryBoxForOSMCheck(bottom_left, top_right){
-    if (rectangle) {
-        rectangle.setMap(null); // Remove the rectangle from the map
-        rectangle = null; // Optionally, reset the rectangle variable
-    }
-
-    var rectangleBounds = new google.maps.LatLngBounds(
-        // Bottom-left corner (southwest)
-        { lat: bottom_left[0], lng: bottom_left[1] },
-        // Top-right corner (northeast)
-        { lat: top_right[0], lng: top_right[1] }
-      );
-
-    var rectangle = new google.maps.Rectangle({
-        bounds: rectangleBounds,
-        //editable: true, // Makes it resizable by the user
-        //draggable: true, // Makes it draggable by the user
-        map: map,
-        fillColor: "#555555",
-        fillOpacity: 0,
-        strokeOpacity: 0.5,
-        strokeWeight: 2,
-        strokeColor: "#555555",
-      });
-}
 
 async function findAndCheckBikePaths(type, bbox, segments) {
-    if (document.getElementById(type + 'Check').checked == false) {
+    let transtype = type
+    if (type == "ElevationLoss"){
+        transtype = "ElevationGain"
+    }
+    else if (type == "bicycle=yes"|| type == "route=bicycle"|| type == "bicycle=designated"){
+        transtype = "highway=cycleway"
+    }
+    else if(type == "surface=asphalt"|| type=="surface=concrete"||type =="surface=sett"){
+        transtype = "surface=paved"
+    }
+
+
+
+    if (document.getElementById(transtype + 'Check').checked == false) {
         return; // Return if the checkbox is not checked
     } else {
         const data = await getBikePaths(bbox, type);
@@ -701,7 +775,6 @@ async function fetchRouteAndRender(retryCount = 10) {
         ratingsList.innerHTML = '';
 
         const polylines = data.routes.map((route) => route.polyline.encodedPolyline);
-        const totalDistance = data.routes.reduce((sum, route) => sum + route.distanceMeters, 0);
 
         for (const [index, polyline] of polylines.entries()) {
             const decodedPolyline = google.maps.geometry.encoding.decodePath(polyline);
@@ -759,6 +832,38 @@ function checkTrafficLights(trafficLights, segments) {
     intersectTrafficLights(segments, bufferedPolygons);
 }
 
+function createRatingItem(id, text) {
+    const ratingItem = document.createElement('li');
+    ratingItem.id = id;
+    ratingItem.innerText = text;
+    return ratingItem;
+}
+
+function appendRatingItem(ratingsList, condition, value, index, label, ratingList, type = "percentage") {
+    const id = `${label}-${index}`;
+    if (condition) {
+        const text = type === "percentage" 
+            ? `${label}: ${value[index].toFixed(2)}%, Index: ${ratingList[index].toFixed(2)}\n`
+            : type === "meters"
+                ? `${label}: ${value[index].toFixed(2)}m, Index: ${ratingList[index].toFixed(2)}\n`
+                : `${label}: ${value[index].toFixed(2)}, Index: ${ratingList[index].toFixed(2)}\n`;
+
+        const existingItem = document.getElementById(id);
+        if (existingItem) {
+            existingItem.innerText = text;
+        } else {
+            ratingsList.appendChild(createRatingItem(id, text));
+        }
+    } else {
+        const existingItem = document.getElementById(id);
+        if (existingItem) {
+            existingItem.innerText = `${label}: NO DATA\n`;
+        } else {
+            ratingsList.appendChild(createRatingItem(id, `${label}: NO DATA\n`));
+        }
+    }
+}
+
 function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePathsArray, TrafficLightIntersectionList, index) {
     if (index == 0) { 
         ratingsList.innerHTML = '';
@@ -794,31 +899,6 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
                 calculateRating(TrafficLightIntersectionList, weight_traffic_lights, traffic_lights_ratingList);
                 calculateRating(RoutesDistancesList, weight_Distance, Distance_ratingList);
 
-                for (let i = 0; i < Distance_ratingList.length; i++) {
-                    let numerator = [
-                        Elevation_Loss_ratingList[i],
-                        highway_cycleway_ratingList[i],
-                        bicycle_yes_ratingList[i],
-                        surface_paved_ratingList[i],
-                        surface_asphalt_ratingList[i],
-                        route_bicycle_ratingList[i],
-                        bicycle_designated_ratingList[i],
-                        surface_concrete_ratingList[i]
-                    ].filter(value => !isNaN(value)).reduce((a, b) => a + b, 0);
-
-                    let denominator = [
-                        Distance_ratingList[i],
-                        Elevation_Gain_ratingList[i],
-                        traffic_lights_ratingList[i],
-                        surface_sett_ratingList[i]
-                    ].filter(value => !isNaN(value)).reduce((a, b) => a + b, 0);
-
-                    if (denominator !== 0) {
-                        finalRatingList.push(numerator / denominator);
-                    } else {
-                        finalRatingList.push(0); // or handle the zero denominator case as needed
-                    }
-                }
             } else {
                 oneRoute = true;
             }
@@ -828,181 +908,203 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
             reject(error);
         }
     }).then(() => {
-        const createRatingItem = (text) => {
-            const ratingItem = document.createElement('li');
-            ratingItem.innerText = text;
-            return ratingItem;
-        };
+        BikepathsRatingsList = [];
+
+        for (let i = 0; i < Distance_ratingList.length; i++) {
+            let numerator = [
+                highway_cycleway_ratingList[i],
+                bicycle_yes_ratingList[i],
+                route_bicycle_ratingList[i],
+                bicycle_designated_ratingList[i],
+            ].filter(value => !isNaN(value)).reduce((a, b) => a + b, 0);
+
+            let denominator = 1
+
+            if (denominator !== 0) {
+                BikepathsRatingsList.push(numerator / denominator);
+            } else {
+                BikepathsRatingsList.push(0); // or handle the zero denominator case as needed
+            }
+        }
+
+        SurfaceRatingsList = [];
+        for (let i = 0; i < Distance_ratingList.length; i++) {
+            let numerator = [
+                surface_paved_ratingList[i],
+                surface_asphalt_ratingList[i],
+                surface_concrete_ratingList[i]
+            ].filter(value => !isNaN(value)).reduce((a, b) => a + b, 0);
+
+            let denominator = [
+                surface_sett_ratingList[i]
+            ].filter(value => !isNaN(value)).reduce((a, b) => a + b, 0);
+
+            if (denominator !== 0) {
+                SurfaceRatingsList.push(numerator / denominator);
+            } else {
+                SurfaceRatingsList.push(0); // or handle the zero denominator case as needed
+            }
+        }
+
+        ElevationRatingsList = [];
+        for (let i = 0; i < Distance_ratingList.length; i++) {
+
+            let numerator = [
+                Elevation_Loss_ratingList[i],
+            ].filter(value => !isNaN(value)).reduce((a, b) => a + b, 0);
+
+            let denominator = [
+                Elevation_Gain_ratingList[i],
+            ].filter(value => !isNaN(value)).reduce((a, b) => a + b, 0);
+
+            if (denominator !== 0) {
+                ElevationRatingsList.push(numerator / denominator);
+            } else {
+                ElevationRatingsList.push(0); // or handle the zero denominator case as needed
+            }
+        }
+
+        finalRatingList = [];
+        for (let i = 0; i < Distance_ratingList.length; i++) {
+
+            let numerator = [
+                Elevation_Loss_ratingList[i],
+                highway_cycleway_ratingList[i],
+                bicycle_yes_ratingList[i],
+                surface_paved_ratingList[i],
+                surface_asphalt_ratingList[i],
+                route_bicycle_ratingList[i],
+                bicycle_designated_ratingList[i],
+                surface_concrete_ratingList[i]
+            ].filter(value => !isNaN(value)).reduce((a, b) => a + b, 0);
+
+            let denominator = [
+                Distance_ratingList[i],
+                Elevation_Gain_ratingList[i],
+                traffic_lights_ratingList[i],
+                surface_sett_ratingList[i]
+            ].filter(value => !isNaN(value)).reduce((a, b) => a + b, 0);
+
+            if (denominator !== 0) {
+                finalRatingList.push(numerator / denominator);
+            } else {
+                finalRatingList.push(0); // or handle the zero denominator case as needed
+            }
+        }
+        console.log('uwu', BikepathsRatingsList, SurfaceRatingsList, ElevationRatingsList, finalRatingList)
 
         if (oneRoute) {
-            ratingsList.appendChild(createRatingItem(`ONLY ONE ROUTE, NO RATINGS CAN BE CALCULATED\n`));
+            ratingsList.appendChild(createRatingItem('only-one-route', `ONLY ONE ROUTE, NO RATINGS CAN BE CALCULATED\n`));
         } else {
-            ratingsList.appendChild(createRatingItem(`${RouteNames[index]}: \n`));
-
+            ratingsList.appendChild(createRatingItem(`route-name-${index}`, `${RouteNames[index]}: \n`));
+        
             if (finalRatingList.length > 1) {
-                ratingsList.appendChild(createRatingItem(`Overall Rating: ${finalRatingList[index].toFixed(2)} \n`));
+                ratingsList.appendChild(createRatingItem(`overall-rating-${index}`, `Overall Rating: ${finalRatingList[index].toFixed(2)} \n`));
             } else {
-                ratingsList.appendChild(createRatingItem(`Overall Rating: ONLY ONE ROUTE, NO RATINGS CAN BE CALCULATED\n`));
+                ratingsList.appendChild(createRatingItem('only-one-route-overall', `Overall Rating: ONLY ONE ROUTE, NO RATINGS CAN BE CALCULATED\n`));
             }
-
+        
             const distanceCheck = document.getElementById('DistanceCheck');
-            if (RoutesDistancesList.length > 0  && distanceCheck.checked) {
-                ratingsList.appendChild(createRatingItem(`Distance: ${RoutesDistancesList[index].toFixed(2)} meters, Index: ${Distance_ratingList[index].toFixed(2)}\n`));
-            } else {
-                ratingsList.appendChild(createRatingItem(`Distance: NO DATA\n`));
-            }
+            appendRatingItem(ratingsList, RoutesDistancesList.length > 0 && distanceCheck.checked, RoutesDistancesList, index, 'Distance', Distance_ratingList, 'meters');
 
             const elevationGainCheck = document.getElementById('ElevationGainCheck');
-            if (metersuplist.length > 0  && elevationGainCheck.checked) {
-                ratingsList.appendChild(createRatingItem(`Elevation Gain: ${metersuplist[index].toFixed(2)} meters, Index: ${Elevation_Gain_ratingList[index].toFixed(2)}\n`));
-            } else {
-                ratingsList.appendChild(createRatingItem(`Elevation Gain: NO DATA\n`));
-            }
+            appendRatingItem(ratingsList, metersuplist.length > 0 && elevationGainCheck.checked, metersuplist, index, 'Elevation Gain', Elevation_Gain_ratingList, 'meters');
 
             const elevationLossCheck = document.getElementById('ElevationLossCheck');
-            if (metersdownlist.length > 0  && elevationLossCheck.checked) {
-                ratingsList.appendChild(createRatingItem(`Elevation Loss: ${metersdownlist[index].toFixed(2)} meters, Index: ${Elevation_Loss_ratingList[index].toFixed(2)}\n`));
-            } else {
-                ratingsList.appendChild(createRatingItem(`Elevation Loss: NO DATA\n`));
-            }
+            appendRatingItem(ratingsList, metersdownlist.length > 0 && elevationLossCheck.checked, metersdownlist, index, 'Elevation Loss', Elevation_Loss_ratingList, 'meters');
 
             const trafficLightsCheck = document.getElementById('trafficLightsCheck');
-            if (TrafficLightIntersectionList.length > 0 && trafficLightsCheck.checked) {
-                ratingsList.appendChild(createRatingItem(`Traffic lights: ${TrafficLightIntersectionList[index]}, Index: ${traffic_lights_ratingList[index].toFixed(2)}\n`));
-            } else {
-                ratingsList.appendChild(createRatingItem(`Traffic lights: NO DATA\n`));
-            }
+            appendRatingItem(ratingsList, TrafficLightIntersectionList.length > 0 && trafficLightsCheck.checked, TrafficLightIntersectionList, index, 'Traffic lights', traffic_lights_ratingList, false);
 
             const highwayCyclewayCheck = document.getElementById('highway=cyclewayCheck');
-            if (finalBikePathsArray[0] && finalBikePathsArray[0][index] !== undefined  && highwayCyclewayCheck.checked) {
-                ratingsList.appendChild(createRatingItem(`highway=cycleway: ${finalBikePathsArray[0][index].toFixed(2)}%, Index: ${highway_cycleway_ratingList[index].toFixed(2)}\n`));
-            } else {
-                ratingsList.appendChild(createRatingItem(`highway=cycleway: NO DATA\n`));
-            }
+            appendRatingItem(ratingsList, finalBikePathsArray[0] && finalBikePathsArray[0][index] !== undefined && highwayCyclewayCheck.checked, finalBikePathsArray[0], index, 'highway=cycleway', highway_cycleway_ratingList);
+
             const bicycleYesCheck = document.getElementById('bicycle=yesCheck');
-            if (finalBikePathsArray[1] && finalBikePathsArray[1][index] !== undefined && bicycleYesCheck.checked) {
-                ratingsList.appendChild(createRatingItem(`bicycle=yes: ${finalBikePathsArray[1][index].toFixed(2)}%, Index: ${bicycle_yes_ratingList[index].toFixed(2)}\n`));
-            } else {
-                ratingsList.appendChild(createRatingItem(`bicycle=yes: NO DATA\n`));
-            }
+            appendRatingItem(ratingsList, finalBikePathsArray[1] && finalBikePathsArray[1][index] !== undefined && bicycleYesCheck.checked, finalBikePathsArray[1], index, 'bicycle=yes', bicycle_yes_ratingList);
 
             const surfacePavedCheck = document.getElementById('surface=pavedCheck');
-            if (finalBikePathsArray[2] && finalBikePathsArray[2][index] !== undefined && surfacePavedCheck.checked) {
-                ratingsList.appendChild(createRatingItem(`surface=paved: ${finalBikePathsArray[2][index].toFixed(2)}%, Index: ${surface_paved_ratingList[index].toFixed(2)}\n`));
-            } else {
-                ratingsList.appendChild(createRatingItem(`surface=paved: NO DATA\n`));
-            }
+            appendRatingItem(ratingsList, finalBikePathsArray[2] && finalBikePathsArray[2][index] !== undefined && surfacePavedCheck.checked, finalBikePathsArray[2], index, 'surface=paved', surface_paved_ratingList);
 
             const surfaceAsphaltCheck = document.getElementById('surface=asphaltCheck');
-            if (finalBikePathsArray[3] && finalBikePathsArray[3][index] !== undefined && surfaceAsphaltCheck.checked) {
-                ratingsList.appendChild(createRatingItem(`surface=asphalt: ${finalBikePathsArray[3][index].toFixed(2)}%, Index: ${surface_asphalt_ratingList[index].toFixed(2)}\n`));
-            } else {
-                ratingsList.appendChild(createRatingItem(`surface=asphalt: NO DATA\n`));
-            }
+            appendRatingItem(ratingsList, finalBikePathsArray[3] && finalBikePathsArray[3][index] !== undefined && surfaceAsphaltCheck.checked, finalBikePathsArray[3], index, 'surface=asphalt', surface_asphalt_ratingList);
 
             const routeBicycleCheck = document.getElementById('route=bicycleCheck');
-            if (finalBikePathsArray[4] && finalBikePathsArray[4][index] !== undefined && routeBicycleCheck.checked) {
-                ratingsList.appendChild(createRatingItem(`route=bicycle: ${finalBikePathsArray[4][index].toFixed(2)}%, Index: ${route_bicycle_ratingList[index].toFixed(2)}\n`));
-            } else {
-                ratingsList.appendChild(createRatingItem(`route=bicycle: NO DATA\n`));
-            }
+            appendRatingItem(ratingsList, finalBikePathsArray[4] && finalBikePathsArray[4][index] !== undefined && routeBicycleCheck.checked, finalBikePathsArray[4], index, 'route=bicycle', route_bicycle_ratingList);
 
             const bicycleDesignatedCheck = document.getElementById('bicycle=designatedCheck');
-            if (finalBikePathsArray[5] && finalBikePathsArray[5][index] !== undefined && bicycleDesignatedCheck.checked) {
-                ratingsList.appendChild(createRatingItem(`bicycle=designated: ${finalBikePathsArray[5][index].toFixed(2)}%, Index: ${bicycle_designated_ratingList[index].toFixed(2)}\n`));
-            } else {
-                ratingsList.appendChild(createRatingItem(`bicycle=designated: NO DATA\n`));
-            }
+            appendRatingItem(ratingsList, finalBikePathsArray[5] && finalBikePathsArray[5][index] !== undefined && bicycleDesignatedCheck.checked, finalBikePathsArray[5], index, 'bicycle=designated', bicycle_designated_ratingList);
 
             const surfaceConcreteCheck = document.getElementById('surface=concreteCheck');
-            if (finalBikePathsArray[6] && finalBikePathsArray[6][index] !== undefined && surfaceConcreteCheck.checked) {
-                ratingsList.appendChild(createRatingItem(`surface=concrete:  ${finalBikePathsArray[6][index].toFixed(2)}%, Index: ${surface_concrete_ratingList[index].toFixed(2)}\n`));
-            } else {
-                ratingsList.appendChild(createRatingItem(`surface=concrete: NO DATA\n`));
-            }
+            appendRatingItem(ratingsList, finalBikePathsArray[6] && finalBikePathsArray[6][index] !== undefined && surfaceConcreteCheck.checked, finalBikePathsArray[6], index, 'surface=concrete', surface_concrete_ratingList);
 
             const surfaceSettCheck = document.getElementById('surface=settCheck');
-            if (finalBikePathsArray[7] && finalBikePathsArray[7][index] !== undefined && surfaceSettCheck.checked) {
-                ratingsList.appendChild(createRatingItem(`surface=sett:  ${finalBikePathsArray[7][index].toFixed(2)}%, Index: ${surface_sett_ratingList[index].toFixed(2)}\n`));
-            } else {
-                ratingsList.appendChild(createRatingItem(`surface=sett: NO DATA\n`));
-            }
+            appendRatingItem(ratingsList, finalBikePathsArray[7] && finalBikePathsArray[7][index] !== undefined && surfaceSettCheck.checked, finalBikePathsArray[7], index, 'surface=sett', surface_sett_ratingList);
         }
     }).catch(error => {
         console.error('Error in displayRatings:', error);
     });
 }
 
+// EDIT FLOWCHART TO INCLUDE FALLBACK FUNCTIONALITY
 async function fetchElevationData(path, routeIndex) {
-    if (document.getElementById('ElevationGainCheck').checked == false && document.getElementById('ElevationLossCheck').checked == false) {
+    var elevationService = new google.maps.ElevationService();
+    let numbersOfSamples = Math.round(RoutesDistancesList[routeIndex] / 50);
+
+    if (!path || path.length === 0) {
+        console.error('Invalid path data');
         return;
     }
-    else{
-        let numbersOfSamples = Math.round(RoutesDistancesList[routeIndex] / 50);
 
-        if (!path || path.length === 0) {
-            console.error('Invalid path data');
-            return;
-        }
+    // Prepare the path coordinates for the OpenElevation API
+    const coordinates = path.map(point => `${point.lat()},${point.lng()}`).join('|');
+    const openElevationUrl = `https://api.open-elevation.com/api/v1/lookup?locations=${coordinates}`;
+    const googleMapsUrl = `https://maps.googleapis.com/maps/api/elevation/json?locations=${coordinates}&key=${apiKey}`;
+    const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
 
-        // Prepare the path coordinates for the OpenElevation API
-        const coordinates = path.map(point => `${point.lat()},${point.lng()}`).join('|');
-        const url = `https://api.open-elevation.com/api/v1/lookup?locations=${coordinates}`;
+    const pathRequest ={
+        path:path, 
+        samples: numbersOfSamples,
+    };
 
-        const fetchWithRetry = async (url, retries = 3) => {
-            for (let i = 0; i < retries; i++) {
-                try {
-                    const response = await fetch(url);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return await response.json();
-                } catch (error) {
-                    if (i === retries - 1) {
-                        throw error;
-                    }
-                    console.warn(`Retrying fetch... (${i + 1}/${retries})`);
-                }
-            }
-        };
-
-
-        try {
-            const data = await fetchWithRetry(url);
-
-            if (data.results) {
-                let metersdown = 0;
-                let metersup = 0;
-
-                // Extract elevation values
-                const elevations = data.results.map(result => result.elevation);
-
-                const extractedCoordinates = []; // New array to store extracted coordinates
-                data.results.forEach(result => {
-                    const { latitude, longitude } = result;
-                    extractedCoordinates.push({ lat: latitude, lng: longitude }); // Extract lat and lng
-                });
-
-                let lastElevation = elevations[0];
-                for (const value of elevations) {
-                    if (value > lastElevation) {
-                        metersup += (value - lastElevation);
-                    } else if (value < lastElevation) {
-                        metersdown += (lastElevation - value);
-                    }
-                    lastElevation = value;
-                }
-
-                metersdownlist[routeIndex] = metersdown / 10;
-                metersuplist[routeIndex] = metersup / 10;
+    elevationService.getElevationAlongPath(pathRequest, (results, status) => {
+        if (status === 'OK') {
+            if (results) {
+                metersdown = 0
+                metersup = 0
                 
+                
+                // Extract elevation values
+                const elevations = results.map(result => result.elevation);
+                results.forEach(result => {
+                    const location = result.location;
+                  });
+                lastElevation = elevations[0]
+                for(const value of elevations) {
+                    if (value > (lastElevation)){
+                        metersup = metersup + (value - lastElevation) 
+                    }
+                    else if (value < (lastElevation)){
+                        metersdown = metersdown + (lastElevation - value) 
+                    }
+                }
+                metersdownlist.push(metersdown)
+                metersuplist.push(metersup)
+                if (metersuplist.length === polylinesArray.length) {
+                    minElevation = Math.min(...metersuplist)
+                    maxElevation = Math.max(...metersuplist)
+                    ElevationRatings = []
+                    for (let i of metersuplist) {
+                        ElevationRatings.push((i-minElevation)/(maxElevation-minElevation)); 
+                    }
+                }
             } else {
                 console.error('No elevation results found');
             }
-        } catch (error) {
-            console.error('Error fetching elevation data:', error);
+        } else {
+            console.error('Elevation service failed due to:', status);
         }
-    }
+        
+    });
 }
 
 function clearAllPolylines() {
@@ -1015,27 +1117,9 @@ function clearAllPolylines() {
 const width_of_map_container = document.querySelector('#map_container').offsetWidth;
 searchBar.style.width = `${width_of_map_container}px`;
 
-function run(){
-window.initMap = initMap;
-}
-
-setTimeout(run, 1000)
-
-function debuggingInterval(){
-    setInterval(() => {
-        console.log(finalBikePathsArray)
-    }, 5000);
-}
-//debuggingInterval()
 
 
 
 //key page: AIzaSyAG8M_Uhho1glaT4N1MRY3ZsaNkywROGTk
+// MAYBE CHANGE INTERSECTION FUNCTIONS SO THAT IT CHECKS IF SAMPLES ARE IN POLYGON. TURF.JS HAS FOLLOWING FUNCTION: BOOLEANPOINTINPOLYGON. THIS COULD INPROVE ACCURACY, ELIMINATE OVER 100% INTERSECTING AND COULD EVEN IMPROVE RUNTIME DUE TUE LACK OF BUFFERING OF THE ROUTE
 
-
-//Errors at [Attempt 1]: Bicycleyes, route=bicycle, surface=sett
-//Errors at [Attempt 2]: Bicycleyes, route=bicycle, surface=concrete, surface=sett
-//NOT THE SAME OVER ALL ROUTES. SOMETHING GOES WRONG WITH THE FETCHING OF THE OSM DATA FOR SOME LISTS TO BE RETURNING EMPTY ARRAYS!!!
-//IMPORTNT ERROR FIXING REQUIRED
-//
-// MORE INFORMATION: ERROR CANT HAPPEN IF OSM RETURNS NO DATA!!!!!!!!
