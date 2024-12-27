@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ZüRIDE</title> 
-  <link rel="stylesheet" type="text/css" href="style.css"/>
+  <link rel="stylesheet" type="text/css" href="style2.css"/>
   <link rel="icon" type="image/x-icon" href="images/favicon.ico">
 </head>
 <body>
@@ -74,8 +74,8 @@
   <div id="title">
     <div id="logo">
       <img src="images/logo1.png" alt="Bikemaplogo1" id="title_logo">
+      <h1>VERSION 15.0</h1>
     </div>
-    <h1>Version 10.0</h1> 
     <div id="otherlinks">
       <button class="otherlinks_button" id="HowToUseBTN">How to use</button>
       <button class="otherlinks_button" id="AboutMeBTN">About me</button>
@@ -92,7 +92,19 @@
       <button id="chooseAButton" onclick="ChooseAAsButton()">Choose As A</button>
       <button id="chooseBButton" onclick="ChooseBAsButton()">Choose As B</button>
     </div>
-  </div>
+    <div class="container" id="container">
+      <button id="SubmitButton" onclick="SubmitButton()" class="Submit_Button">Calculate Routes</button>
+      <div id="throbber_container" class="throbber_container"><div class="throbber_item"></div></div>
+      <div id="results_container" >
+          <div id="result_1" class="result-div" hidden>Result 1</div>
+          <div id="result_2" class="result-div" hidden>Result 2</div>
+          <div id="result_3" class="result-div" hidden>Result 3</div>
+          <div id="finalResultsContainer" class="finalResultsContainer"></div>
+          <button id="Export_Button" onclick="Export_To_GMaps()">Export to Google Maps</button>
+          <button id="NewRoute_Button" onclick="NewRoute()">New Route</button>
+      </div>
+    </div>
+  </div>  
   
   <h1>Ratings:</h1>
   <div id="Ratings_Container" class="Ratings_Container">
@@ -123,8 +135,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
-  <script src="script.js" defer></script>
-  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAG8M_Uhho1glaT4N1MRY3ZsaNkywROGTk&libraries=geometry,places&callback=initMap"></script>
+  <script src="script2.js" defer></script>
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBZTAGfUNYnmAy7GgEoOwJbzK7livB-o14&libraries=geometry,places&callback=initMap"></script>
 
 </body>
 </html>

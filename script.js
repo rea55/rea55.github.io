@@ -10,6 +10,8 @@ let chosenlng = 0;
 const searchBar = document.getElementById('searchBar');     //the search Bar
 const markers = {};             //An Array of all the Markers
 
+let best_route = 0;
+
 let weight_Distance = (parseFloat(document.getElementById('Distance').value));
 let weight_Elevation_Gain = parseFloat(document.getElementById('ElevationGain').value);
 let weight_Elevation_Loss = parseFloat(document.getElementById('ElevationGain').value);
@@ -23,6 +25,8 @@ let weight_surface_concrete = parseFloat(document.getElementById('surface=paved'
 let weight_surface_sett = parseFloat(document.getElementById('surface=paved').value);
 let weight_traffic_lights = parseFloat(document.getElementById('trafficLights').value);
 const throbber = document.getElementById('throbber');
+
+var numberOfRoutes = 0;
 
 let finalBikePathsArray = [[], [], [], [], [], [], [], [], [69, 69, 69]];
 
@@ -40,9 +44,10 @@ let polylinesArray = []; // Array to store polylines
 
 let routeColors = ['#FF0000', '#000000', '#0000FF']; // Red, Black, Blue
 
-let RouteNames = ['Red', 'Black', 'Blue']; //A list of the names of all the routes which will be displayed in the "Ratings" part of the HTML
+let RouteNames = ['red', 'black', 'blue']; //A list of the names of all the routes which will be displayed in the "Ratings" part of the HTML
 
 const apiKey = 'AIzaSyAG8M_Uhho1glaT4N1MRY3ZsaNkywROGTk';   //my google maps API key
+
 const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';    //The link that is used to make a request to google maps to compute the routes
 
 let BikePathsFound = false
@@ -52,6 +57,7 @@ var oneRoute = true;
 let metersuplist = [];
 let metersdownlist = [];
 
+let export_url = [];
 
 var Distance_ratingList = [];
 var Elevation_Gain_ratingList = [];
@@ -87,6 +93,7 @@ function ResetVars() {
     //ratingsList.innerHTML = '';
     BikepathsRatingsList = [];
     SurfaceRatingsList = [];
+    export_url = [];
 }
 
 function addMarker(name, lat, lng, Label) {
@@ -123,7 +130,6 @@ function delMarker(name) {                          //deletes a marker by it nam
 }
 
 function transposeLists(listspos, listsneg, resultinglist) {
-    console.log('transposing')
     let noneg = false;
     let transposedpos = listspos[0].map((_, colIndex) => listspos.map(row => row[colIndex]));
     if (listsneg.length == []) {
@@ -132,7 +138,6 @@ function transposeLists(listspos, listsneg, resultinglist) {
     else {
         let transposedneg = listsneg[0].map((_, colIndex) => listsneg.map(row => row[colIndex]));
     }
-    console.log('noneg=', noneg)
     for (let i = 0; i < transposedpos.length; i++) {
         let numerator = transposedpos[i].filter(value => !isNaN(value)).reduce((a, b) => a + b, 0);
 
@@ -272,6 +277,17 @@ function toggleMenu() {
     }
 }
 
+function SubmitButton() {
+    const submitButton = document.getElementById('SubmitButton');
+    if (submitButton) {
+        submitButton.style.display = 'none';
+    }
+    if (throbber_container) {
+        throbber_container.style.display = 'flex';
+        results_container.style.display = 'none';
+    }
+    fetchRouteAndRender();
+}
 
 function initMap() {
     var directionsService = new google.maps.DirectionsService();
@@ -297,7 +313,6 @@ function initMap() {
     addMarker('Startpoint', lat1, lng1, 'A');
     addMarker('Endpoint', lat2, lng2, 'B');
 
-    fetchRouteAndRender();
 
     const searchBox = new google.maps.places.SearchBox(searchBar);
     map.controls[google.maps.ControlPosition.TOP_LEFT].push(searchBar);
@@ -363,6 +378,10 @@ function initMap() {
     ContactBTN.addEventListener('click', () => scrolltoitem('Contact'));
     ScrollUpBTN.addEventListener('click', () => scrolltotop());
 
+
+    const container = document.getElementById('container');
+    map.controls[google.maps.ControlPosition.TOP_CENTER].push(container);
+
     window.addEventListener('scroll', function () {
         const scrollUpButton = document.getElementById('ScrollUpBTN');
         const scrollPosition = window.scrollY;
@@ -401,8 +420,14 @@ function ChooseAAsButton() {
     }
     delMarker('Startpoint');
     addMarker('Startpoint', lat1, lng1, 'A');
-    fetchRouteAndRender();
+    if (throbber_container.style.display = 'block'|| results_container.style.display == 'block') {
+        throbber_container.style.display = 'none';
+        results_container.style.display = 'none';
+        document.querySelector('.Submit_Button').style.display = 'block';
+    }
+
 }
+
 
 function ChooseBAsButton() {
     if (throbber) {
@@ -418,7 +443,6 @@ function ChooseBAsButton() {
     }
     delMarker('Endpoint');
     addMarker('Endpoint', lat2, lng2, 'B');
-    fetchRouteAndRender();
 }
 
 function scrolltoitem(itemid) {
@@ -450,7 +474,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
         
         // Add event listener to log the value when it changes
         input.addEventListener('input', (event) => {
-            console.log(event.target.name, event.target.value)
             updateWeights(event.target.name, event.target.value);
 
         });
@@ -489,17 +512,14 @@ function calculateRating(Valuelist, weight, ratinglist) {
 function updateWeights(name, value) {
     switch(name) {
         case 'Distance':
-            console.log(name);
             weight_Distance = parseFloat(value);
             calculateRating(RoutesDistancesList, parseFloat(value), Distance_ratingList);
             for (let i = 0; i < RoutesDistancesList.length; i++) {
                 appendRatingItem(ratingsList, RoutesDistancesList.length > 0, RoutesDistancesList, i, 'Distance', Distance_ratingList);
-                console.log('b')
             }
             break;
         case 'ElevationGain':
-            console.log(name);
-            weight_Elevation_Gain = parseFloat(value);
+        weight_Elevation_Gain = parseFloat(value);
             calculateRating(metersuplist, parseFloat(value), Elevation_Gain_ratingList);
             for (let i = 0; i < metersuplist.length; i++) {
                 appendRatingItem(ratingsList, metersuplist.length > 0, metersuplist, i, 'Elevation Gain', Elevation_Gain_ratingList);
@@ -514,7 +534,6 @@ function updateWeights(name, value) {
             break;
 
         case 'highway=cycleway':
-            console.log(name);
             weight_highway_cycleway = parseFloat(value);
             calculateRating(finalBikePathsArray[0], parseFloat(value), highway_cycleway_ratingList);
             for (let i = 0; i < finalBikePathsArray[0].length; i++) {
@@ -542,7 +561,6 @@ function updateWeights(name, value) {
             break;
 
         case 'surface=paved':
-            console.log(name);
             weight_surface_paved = parseFloat(value);
             calculateRating(finalBikePathsArray[2], parseFloat(value), surface_paved_ratingList);
             for (let i = 0; i < finalBikePathsArray[2].length; i++) {
@@ -570,7 +588,6 @@ function updateWeights(name, value) {
             break;
 
         case 'trafficLights':
-            console.log(name);
             weight_traffic_lights = parseFloat(value);
             calculateRating(TrafficLightIntersectionList, parseFloat(value), traffic_lights_ratingList);
             for (let i = 0; i < TrafficLightIntersectionList.length; i++) {
@@ -581,6 +598,11 @@ function updateWeights(name, value) {
             console.error('Invalid input:', name, value);
     }
 }
+
+
+
+
+
 
 async function getBikePaths(bbox, type) {
     const maxRetries = 3;
@@ -679,7 +701,7 @@ async function getTrafficLights(bbox, segments) {
     }  
 }
 
-async function checkForOSMBikepaths(PolylineCoords, routeIndex) {
+async function checkForOSMBikepaths(PolylineCoords, routeIndex, numberOfRoutes) {
     let bbox_bottom_left = [200, 200];
     let bbox_top_right = [-200, -200];
     const segments = [];
@@ -716,8 +738,23 @@ async function checkForOSMBikepaths(PolylineCoords, routeIndex) {
         findAndCheckBikePaths('surface=sett', bbox, segments),
         getTrafficLights(bbox, segments)
     ]).then(() => {
-        displayRatings(RoutesDistancesList[routeIndex], metersuplist, metersdownlist, finalBikePathsArray, TrafficLightIntersectionList, routeIndex);
+        displayRatings(RoutesDistancesList[routeIndex], metersuplist, metersdownlist, finalBikePathsArray, TrafficLightIntersectionList, routeIndex, numberOfRoutes);
     });
+}
+
+function NewRoute() {
+    ResetVars();
+    clearAllPolylines();
+    document.getElementById('SubmitButton').style.display = 'block';
+    document.getElementById('finalResultsContainer').style.display = 'none';  
+    document.getElementById('Export_Button').style.display = 'none';
+    document.getElementById('NewRoute_Button').style.display = 'none';
+
+}
+
+function Export_To_GMaps(routeIndex = best_route){
+    console.log(RouteNames.indexOf(routeIndex)+1)
+    window.open(export_url[routeIndex.indexOf(RouteNames)+1]);
 }
 
 async function fetchRouteAndRender(retryCount = 10) {
@@ -771,6 +808,7 @@ async function fetchRouteAndRender(retryCount = 10) {
             throw new Error('No routes found in the response');
         }
 
+        numberOfRoutes = data.routes.length;
         clearAllPolylines();
         ratingsList.innerHTML = '';
 
@@ -795,12 +833,14 @@ async function fetchRouteAndRender(retryCount = 10) {
 
             routePolyline.setMap(map);
             polylinesArray.push(routePolyline);
+            export_url.push(`https://www.google.com/maps/dir/?api=1&travelmode=bicycling&origin=${lat1},${lng1}&destination=${lat2},${lng2}&waypoints=${PolylineCoords.map(coord => coord.join(',')).join('|')}`)
+            console.log(export_url)
 
             if (document.getElementById('ElevationGainCheck').checked || document.getElementById('ElevationLossCheck').checked) {
                 await fetchElevationData(decodedPolyline, index);
             }
 
-            await checkForOSMBikepaths(PolylineCoords, index);
+            await checkForOSMBikepaths(PolylineCoords, index, numberOfRoutes);
         }
     } catch (error) {
         console.error('Error:', error);
@@ -864,7 +904,7 @@ function appendRatingItem(ratingsList, condition, value, index, label, ratingLis
     }
 }
 
-function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePathsArray, TrafficLightIntersectionList, index) {
+function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePathsArray, TrafficLightIntersectionList, index, numberOfRoutes) {
     if (index == 0) { 
         ratingsList.innerHTML = '';
     }
@@ -991,8 +1031,6 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
                 finalRatingList.push(0); // or handle the zero denominator case as needed
             }
         }
-        console.log('uwu', BikepathsRatingsList, SurfaceRatingsList, ElevationRatingsList, finalRatingList)
-
         if (oneRoute) {
             ratingsList.appendChild(createRatingItem('only-one-route', `ONLY ONE ROUTE, NO RATINGS CAN BE CALCULATED\n`));
         } else {
@@ -1040,12 +1078,63 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
             const surfaceSettCheck = document.getElementById('surface=settCheck');
             appendRatingItem(ratingsList, finalBikePathsArray[7] && finalBikePathsArray[7][index] !== undefined && surfaceSettCheck.checked, finalBikePathsArray[7], index, 'surface=sett', surface_sett_ratingList);
         }
+
+        if (index==numberOfRoutes - 1) {
+            if (throbber_container.style.display = 'block'){
+                best_route=RouteNames[finalRatingList.indexOf(Math.max(...finalRatingList))]
+                throbber_container.style.display = 'none';
+                results_container.style.display = 'block';
+                document.getElementById('finalResultsContainer').style.display = 'block';
+                document.getElementById('Export_Button').style.display = 'inline-block';
+                document.getElementById('NewRoute_Button').style.display = 'inline-block';
+                if (numberOfRoutes == 1) {
+                    best_route = RouteNames[0]
+                }
+                document.getElementById('finalResultsContainer').innerText = `Based on your parameters, the ${best_route} route is recommended.`;
+                console.log('finalRatingList:', finalRatingList);
+            }
+        }
+
+        /*if (index === numberOfRoutes - 1) {
+            if (throbber_container.style.display = 'block'){
+                throbber_container.style.display = 'none';
+                results_container.style.display = 'block';
+                console.log('finalRatingList:', finalRatingList);
+                if (numberOfRoutes == 1){
+                    document.getElementById('result_1').style.display = 'block';
+                    document.getElementById('result_2').style.display = 'none';
+                    document.getElementById('result_3').style.display = 'none';
+
+                    document.getElementById('result_1').innerText = 'Only one viable route found';
+                }
+                else if (numberOfRoutes == 2){
+                    document.getElementById('result_1').style.display = 'block';
+                    document.getElementById('result_2').style.display = 'block';
+                    document.getElementById('result_3').style.display = 'none';
+
+                    document.getElementById('result_1').innerText = RouteNames[0] + ' - Rating: ' + finalRatingList[0].toFixed(2);
+                    document.getElementById('result_2').innerText = RouteNames[1] + ' - Rating: ' + finalRatingList[1].toFixed(2);
+                }
+                else if (numberOfRoutes ==3){
+                    document.getElementById('result_1').style.display = 'block';
+                    document.getElementById('result_2').style.display = 'block';
+                    document.getElementById('result_3').style.display = 'block';
+          
+                    document.getElementById('result_1').innerText = RouteNames[0] + ' - Rating: ' + finalRatingList[0].toFixed(2);
+                    document.getElementById('result_2').innerText = RouteNames[1] + ' - Rating: ' + finalRatingList[1].toFixed(2);
+                    document.getElementById('result_3').innerText = RouteNames[2] + ' - Rating: ' + finalRatingList[2].toFixed(2);
+                }
+                else{
+                    console.log('???')
+                }
+            }
+        }
+*/
     }).catch(error => {
         console.error('Error in displayRatings:', error);
     });
 }
 
-// EDIT FLOWCHART TO INCLUDE FALLBACK FUNCTIONALITY
 async function fetchElevationData(path, routeIndex) {
     var elevationService = new google.maps.ElevationService();
     let numbersOfSamples = Math.round(RoutesDistancesList[routeIndex] / 50);
@@ -1122,4 +1211,3 @@ searchBar.style.width = `${width_of_map_container}px`;
 
 //key page: AIzaSyAG8M_Uhho1glaT4N1MRY3ZsaNkywROGTk
 // MAYBE CHANGE INTERSECTION FUNCTIONS SO THAT IT CHECKS IF SAMPLES ARE IN POLYGON. TURF.JS HAS FOLLOWING FUNCTION: BOOLEANPOINTINPOLYGON. THIS COULD INPROVE ACCURACY, ELIMINATE OVER 100% INTERSECTING AND COULD EVEN IMPROVE RUNTIME DUE TUE LACK OF BUFFERING OF THE ROUTE
-

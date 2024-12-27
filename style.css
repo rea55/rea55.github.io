@@ -39,6 +39,7 @@ html, body {
   opacity: 1;
 }
 
+
 #searchBar {
   background-color: white;
   border: 1px solid #ccc;
@@ -50,19 +51,127 @@ html, body {
   margin: 5px;
   outline: none;
   width: 100%;
-  max-width: 400px;
+  max-width: 300px;
   transition: background-color 0.3s, box-shadow 0.3s;
   font-family: Arial, sans-serif;
 }
 
+/* SEARCH BAR RN USES PX. THIS WILL LOOK BAD DEPENDING ON SCREEN RESOLUTIONS. FIX SOMETIMES IDK*/
+
+
+
 #map_container {
-  height: 540px;
+  height: 90%;
   background-color: #F8FCDA;
   padding-top: 10px;
   padding-left: 10px;
   padding-right: 10px;
   padding-bottom: 10px;
 }
+
+.container {
+  display: flex;
+  justify-content: center;
+  /*align-items: center;*/
+  height: 50%;
+  position: relative;
+  width: 50%;
+}
+
+.results_container {
+  display:flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 0px;
+  padding-top: 0px;
+  /*border: 1px solid #000; */
+}
+
+.Submit_Button, .throbber_container{
+  margin: 5px auto auto auto; /* Set top margin to 5px and center horizontally */
+  background-color: white; 
+  color: #333333;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  display: block; /* Ensure the elements are block-level to center them */
+}
+
+.Submit_Button {
+  position: relative; /* Remove absolute positioning */
+}
+
+.Submit_Button:hover {
+  background-color: #f1f1f1;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.throbber_container {
+  position: relative; /* Remove absolute positioning */
+  display: none;
+}
+
+.results_container {
+  position: relative; /* Remove absolute positioning */
+}
+
+.result-div{
+  display: none;
+  margin: 5px auto auto auto; /* Set top margin to 5px and center horizontally */
+  background-color: white; 
+  color: #333333;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.finalResultsContainer{
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  max-width: 100%;
+  display: none;
+  margin: 5px auto auto auto; /* Set top margin to 5px and center horizontally */
+  background-color: white; 
+  color: #333333;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+
+}
+
+.throbber_item {
+  font-weight: bold;
+  font-family: monospace;
+  font-size: 16px;
+  background:linear-gradient(90deg,#000 50%,#0000 0) right/200% 100%;
+  animation:c1 2s infinite linear;
+}
+
+.throbber_item::before {
+  content:"Calculating your Routes...";
+  color:#0000;
+  padding:0 5px;
+  background:linear-gradient(90deg,#fff 50%,#000 0);
+  -webkit-background-clip:text;
+  background-clip:text;
+  background-size:inherit;
+  background-position: inherit;
+}
+
+@keyframes c1{
+  100%{background-position: left}
+}
+
+
 
 #title_logo {
   height: 50px;
@@ -93,29 +202,6 @@ html, body {
 .otherlinks_button:hover {
   background-color: #D43F1E; /* Darker shade of red */
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); /* More pronounced shadow */
-}
-
-#chooseAButton, #chooseBButton {
-  margin: 10px;
-  background-color: white; 
-  color: #333333;
-  border: none;
-  border-radius: 4px;
-  padding: 10px 20px;
-  font-size: 16px;
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  transition: background-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-#chooseAButton:hover, #chooseBButton:hover {
-  background-color: #f1f1f1;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-#chooseAButton:active, #chooseBButton:active {
-  background-color: #cccccc;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 #ScrollUpBTN {
@@ -247,6 +333,33 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+button {
+  margin: 10px;
+  background-color: white; 
+  color: #333333;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+button.hover{
+  background-color: #f1f1f1;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+button.active{
+  background-color: #cccccc;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+#Export_Button, #NewRoute_Button{
+  display: none;
 }
 
 input[type="range"] {
