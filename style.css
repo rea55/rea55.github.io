@@ -157,7 +157,7 @@ html, body {
 }
 
 .throbber_item::before {
-  content:"Calculating your Routes...";
+  content:"Deine Routen werden berechnet...";
   color:#0000;
   padding:0 5px;
   background:linear-gradient(90deg,#fff 50%,#000 0);

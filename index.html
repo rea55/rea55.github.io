@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ZüRIDE</title> 
-  <link rel="stylesheet" type="text/css" href="style.css"/>
+  <link rel="stylesheet" type="text/css" href="style2.css"/>
   <link rel="icon" type="image/x-icon" href="images/favicon.ico">
 </head>
 <body>
@@ -88,11 +88,11 @@
   <div id="map_container">
     <div id="map" class="map"></div>
     <div id="ChooseButtons">
-      <button id="chooseAButton" onclick="ChooseAAsButton()">Choose As A</button>
-      <button id="chooseBButton" onclick="ChooseBAsButton()">Choose As B</button>
+      <button id="chooseAButton" onclick="ChooseAAsButton()">Als Startpunkt wählen</button>
+      <button id="chooseBButton" onclick="ChooseBAsButton()">Als Endpunkt wählen</button>
     </div>
     <div class="container" id="container">
-      <button id="SubmitButton" onclick="SubmitButton()" class="Submit_Button">Calculate Routes</button>
+      <button id="SubmitButton" onclick="SubmitButton()" class="Submit_Button">Berechne die beste Route</button>
       <div id="throbber_container" class="throbber_container"><div class="throbber_item"></div></div>
       <div id="results_container" >
           <div id="result_1" class="result-div" hidden>Result 1</div>
@@ -134,7 +134,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
-  <script src="script.js" defer></script>
+  <script src="script2.js" defer></script>
   <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBZTAGfUNYnmAy7GgEoOwJbzK7livB-o14&libraries=geometry,places&callback=initMap"></script>
 
 </body>
