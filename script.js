@@ -1090,7 +1090,7 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
                 if (numberOfRoutes == 1) {
                     best_route = RouteNames[0]
                 }
-                document.getElementById('finalResultsContainer').innerText = `Based on your parameters, the ${best_route} route is recommended.`;
+                document.getElementById('finalResultsContainer').innerText = `Basierend auf deinen Parametern wird die ${best_route} Route empfohlen.`;
                 console.log('finalRatingList:', finalRatingList);
             }
         }
