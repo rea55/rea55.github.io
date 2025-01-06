@@ -44,7 +44,7 @@ let polylinesArray = []; // Array to store polylines
 
 let routeColors = ['#FF0000', '#000000', '#0000FF']; // Red, Black, Blue
 
-let RouteNames = ['red', 'black', 'blue']; //A list of the names of all the routes which will be displayed in the "Ratings" part of the HTML
+let RouteNames = ['rot', 'schwarz', 'blau']; //A list of the names of all the routes which will be displayed in the "Ratings" part of the HTML
 
 const apiKey = 'AIzaSyAG8M_Uhho1glaT4N1MRY3ZsaNkywROGTk';   //my google maps API key
 
@@ -1090,7 +1090,7 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
                 if (numberOfRoutes == 1) {
                     best_route = RouteNames[0]
                 }
-                document.getElementById('finalResultsContainer').innerText = `Basierend auf deinen Parametern wird die ${best_route} Route empfohlen.`;
+                document.getElementById('finalResultsContainer').innerText = `Basierend auf deinen Parametern wird die ${best_route}e Route empfohlen.`;
             }
         }
 
