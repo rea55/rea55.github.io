@@ -754,7 +754,7 @@ function NewRoute() {
 
 function Export_To_GMaps(routeIndex = best_route){
     console.log(RouteNames.indexOf(routeIndex)+1)
-    window.open(export_url[routeIndex.indexOf(RouteNames)+1]);
+    window.open(export_url[RouteNames.indexOf(routeIndex)+1]);
 }
 
 async function fetchRouteAndRender(retryCount = 10) {
@@ -1091,7 +1091,6 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
                     best_route = RouteNames[0]
                 }
                 document.getElementById('finalResultsContainer').innerText = `Basierend auf deinen Parametern wird die ${best_route} Route empfohlen.`;
-                console.log('finalRatingList:', finalRatingList);
             }
         }
 
