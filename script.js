@@ -754,7 +754,16 @@ function NewRoute() {
 
 function Export_To_GMaps(routeIndex = best_route){
     console.log(RouteNames.indexOf(routeIndex)+1)
-    window.open(export_url[RouteNames.indexOf(routeIndex)+1]);
+    if (best_route == "rot"){
+        window.open(export_url[0]);
+    }
+    else if (best_route == "schwarz"){
+        window.open(export_url[1]);
+    }
+    else if (best_route == "blau"){
+        window.open(export_url[2]);
+    }
+
 }
 
 async function fetchRouteAndRender(retryCount = 10) {
