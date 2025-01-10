@@ -1,11 +1,15 @@
-const express = require('express');
-const app = express();
-const port = 3000;
+import axios from 'axios';
 
-app.get('/', (req, res) => {
-  res.send('Hello World!');
+const express = require('express'); // Import Express
+const app = express(); // Create an Express app
+const port = 3000; // Define the server port
+
+// Define a route for '/test'
+app.get('/test', (req, res) => {
+  res.send('hello world'); // Respond with "hello world"
 });
 
+// Start the server
 app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+  console.log(`Server is running at http://localhost:${port}`);
 });

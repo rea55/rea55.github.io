@@ -7,14 +7,35 @@
   <meta name="author" content="">
   <meta name="description" content="">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <!-- Import Axios from CDN -->
+  <script type="module">
+    import axios from 'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js';
+
+    // Define the test_backend function
+    function test_backend() {
+      // Backend URL
+      const backendUrl = 'http://127.0.0.1:8080/test';
+
+      // Send a GET request to the backend
+      axios
+        .get(backendUrl)
+        .then((response) => {
+          console.log('Response from backend:', response.data); // Log the response data
+        })
+        .catch((error) => {
+          console.error('Error connecting to backend:', error); // Log any errors
+        });
+    }
+
+    // Example usage: Call the function
+    test_backend();
+  </script>
 
 </head>
 
 <body>
-  <script src="script.js"></script> 
-
   <p>You agree to only give public access to pages using Last.fm's web services that have been previously approved by Last.fm in writing.</p>
-
 </body>
 
 </html>
