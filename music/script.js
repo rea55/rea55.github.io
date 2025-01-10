@@ -1,5 +1,3 @@
-const axios = require('axios');
-
 // Example data to send
 const dataToSend = {
   name: 'John',
