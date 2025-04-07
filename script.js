@@ -601,7 +601,31 @@ function updateWeights(name, value) {
 
 
 
+function drawBoundingBox(bbox) {
+    if (map) {
+        console.log('Map is initialized:', map);
+    } else {
+        console.error('Map is not initialized.');
+    }
+    console.log('drawing bbox,', bbox);
 
+    const rectangle = new google.maps.Rectangle({
+        bounds: {
+            south: bbox[0],
+            west: bbox[1],
+            north: bbox[2],
+            east: bbox[3],
+        },
+        strokeColor: '#FF0000', // Red border
+        strokeOpacity: 1.0,
+        strokeWeight: 2,
+        fillColor: '#808080', // Slightly gray fill
+        fillOpacity: 0.3, // Transparency
+        map: map, // Attach to the map
+    });
+
+    return rectangle;
+}
 
 
 async function getBikePaths(bbox, type) {
@@ -706,6 +730,14 @@ async function checkForOSMBikepaths(PolylineCoords, routeIndex, numberOfRoutes) 
     let bbox_top_right = [-200, -200];
     const segments = [];
 
+    if (!PolylineCoords || PolylineCoords.length === 0) {
+        console.error('PolylineCoords is empty or invalid:', PolylineCoords);
+    }
+    else{
+        console.log('PolylineCoords is valid');
+    }
+
+
     for (let i = 0; i < PolylineCoords.length - 1; i++) {
         const start = PolylineCoords[i];
         const end = PolylineCoords[i + 1];
@@ -726,6 +758,8 @@ async function checkForOSMBikepaths(PolylineCoords, routeIndex, numberOfRoutes) 
     }
 
     const bbox = [bbox_bottom_left[0], bbox_bottom_left[1], bbox_top_right[0], bbox_top_right[1]];
+    drawBoundingBox(bbox); // Draw the bounding box on the map
+
 
     Promise.all([
         findAndCheckBikePaths('highway=cycleway', bbox, segments),
@@ -753,7 +787,7 @@ function NewRoute() {
 }
 
 function Export_To_GMaps(routeIndex = best_route){
-    console.log(RouteNames.indexOf(routeIndex)+1)
+    //console.log(RouteNames.indexOf(routeIndex)+1)
     if (best_route == "rot"){
         window.open(export_url[0]);
     }
@@ -843,7 +877,7 @@ async function fetchRouteAndRender(retryCount = 10) {
             routePolyline.setMap(map);
             polylinesArray.push(routePolyline);
             export_url.push(`https://www.google.com/maps/dir/?api=1&travelmode=bicycling&origin=${lat1},${lng1}&destination=${lat2},${lng2}&waypoints=${PolylineCoords.map(coord => coord.join(',')).join('|')}`)
-            console.log(export_url)
+            //console.log(export_url)
 
             if (document.getElementById('ElevationGainCheck').checked || document.getElementById('ElevationLossCheck').checked) {
                 await fetchElevationData(decodedPolyline, index);
