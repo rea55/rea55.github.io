@@ -946,6 +946,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
  
 
  
+
         // Add event listener to log the value when it changes
  
         input.addEventListener('input', (event) => {
@@ -954,16 +955,17 @@ document.addEventListener('DOMContentLoaded', (event) => {
  
 
  
+
         });
  
 
  
+
     });
  
 
  
 
- 
     // Initialize the map after the DOM is fully loaded
  
     window.initMap = initMap;
@@ -978,6 +980,7 @@ function calculateRating(Valuelist, weight, ratinglist) {
  
 
  
+
     var ratingPreWeight = 0;
  
     var ratingPostWeight = 0;
@@ -1010,11 +1013,17 @@ function calculateRating(Valuelist, weight, ratinglist) {
  
 
  
+
     return ratingPostWeight;
  
 
  
+
 }
+ 
+
+ 
+
  
 
  
@@ -1052,6 +1061,7 @@ function updateWeights(name, value) {
  
 
  
+
             weight_Elevation_Loss = parseFloat(value);
  
             calculateRating(metersdownlist, parseFloat(value), Elevation_Loss_ratingList);
@@ -1064,10 +1074,12 @@ function updateWeights(name, value) {
  
 
  
+
             break;
  
 
  
+
         case 'highway=cycleway':
  
             weight_highway_cycleway = parseFloat(value);
@@ -1082,6 +1094,7 @@ function updateWeights(name, value) {
  
 
  
+
             weight_bicycle_yes = parseFloat(value);
  
             calculateRating(finalBikePathsArray[1], parseFloat(value), bicycle_yes_ratingList);
@@ -1094,6 +1107,7 @@ function updateWeights(name, value) {
  
 
  
+
             weight_route_bicycle = parseFloat(value);
  
             calculateRating(finalBikePathsArray[4], parseFloat(value), route_bicycle_ratingList);
@@ -1106,6 +1120,7 @@ function updateWeights(name, value) {
  
 
  
+
             weight_bicycle_designated = parseFloat(value);
  
             calculateRating(finalBikePathsArray[5], parseFloat(value), bicycle_designated_ratingList);
@@ -1118,10 +1133,12 @@ function updateWeights(name, value) {
  
 
  
+
             break;
  
 
  
+
         case 'surface=paved':
  
             weight_surface_paved = parseFloat(value);
@@ -1136,6 +1153,7 @@ function updateWeights(name, value) {
  
 
  
+
             weight_surface_asphalt = parseFloat(value);
  
             calculateRating(finalBikePathsArray[3], parseFloat(value), surface_asphalt_ratingList);
@@ -1148,6 +1166,7 @@ function updateWeights(name, value) {
  
 
  
+
             weight_surface_concrete = parseFloat(value);
  
             calculateRating(finalBikePathsArray[6], parseFloat(value), surface_concrete_ratingList);
@@ -1160,6 +1179,7 @@ function updateWeights(name, value) {
  
 
  
+
             weight_surface_sett = parseFloat(value);
  
             calculateRating(finalBikePathsArray[7], parseFloat(value), surface_sett_ratingList);
@@ -1172,10 +1192,12 @@ function updateWeights(name, value) {
  
 
  
+
             break;
  
 
  
+
         case 'trafficLights':
  
             weight_traffic_lights = parseFloat(value);
@@ -1210,6 +1232,10 @@ function updateWeights(name, value) {
  
 
  
+
+ 
+
+ 
 async function getBikePaths(bbox, type) {
  
     const maxRetries = 3;
@@ -1218,6 +1244,7 @@ async function getBikePaths(bbox, type) {
  
 
  
+
     if (type == 'route=bicycle'){
  
         const query = `
@@ -1248,6 +1275,7 @@ async function getBikePaths(bbox, type) {
  
 
  
+
     const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
  
     while (attempts < maxRetries) {
@@ -1273,91 +1301,42 @@ async function getBikePaths(bbox, type) {
 
  
 
- 
-async function findAndCheckBikePaths(type, bbox, segments) {
- 
-    let transtype = type
- 
-    if (type == "ElevationLoss"){
- 
-        transtype = "ElevationGain"
- 
+async function findAndCheckBikePaths(type, bufferedRoute, segments) {
+    if (!document.getElementById(type + 'Check').checked) {
+        return; // Skip if the checkbox is not checked
     }
- 
-    else if (type == "bicycle=yes"|| type == "route=bicycle"|| type == "bicycle=designated"){
- 
-        transtype = "highway=cycleway"
- 
-    }
- 
-    else if(type == "surface=asphalt"|| type=="surface=concrete"||type =="surface=sett"){
- 
-        transtype = "surface=paved"
- 
-    }
- 
 
- 
+    const query = `
+        [out:json];
+        way[${type}](${turf.bbox(bufferedRoute).join(',')});
+        out geom;
+    `;
 
- 
+    const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
 
- 
-    if (document.getElementById(transtype + 'Check').checked == false) {
- 
-        return; // Return if the checkbox is not checked
- 
-    } else {
- 
-        const data = await getBikePaths(bbox, type);
- 
-        if (data.elements.length == 0) {
- 
+    try {
+        const response = await axios.get(url);
+        const data = response.data;
+
+        if (data.elements.length === 0) {
             BikePathsFound = false;
- 
-            if (type == 'highway=cycleway') {
- 
-                finalBikePathsArray[0].push(0);
- 
-            } else if (type == 'bicycle=yes') {
- 
-                finalBikePathsArray[1].push(0);
- 
-            } else if (type == 'surface=paved') {
- 
-                finalBikePathsArray[2].push(0);
- 
-            } else if (type == 'surface=asphalt') {
- 
-                finalBikePathsArray[3].push(0);
- 
-            } else if (type == 'route=bicycle') {
- 
-                finalBikePathsArray[4].push(0);
- 
-            } else if (type == 'bicycle=designated') {
- 
-                finalBikePathsArray[5].push(0);
- 
-            } else if (type == 'surface=concrete') {
- 
-                finalBikePathsArray[6].push(0);
- 
-            } else if (type == 'surface=sett') {
- 
-                finalBikePathsArray[7].push(0);
- 
-            }
- 
+            updateFinalBikePathsArray(type, 0);
         } else {
- 
             BikePathsFound = true;
- 
-            await checkSegmentOnBikePath(segments, data.elements, type);
- 
+
+            // Filter paths that intersect with the buffered route
+            const intersectingPaths = data.elements.filter(path => {
+                const pathLineString = turf.lineString(
+                    path.geometry.map(coord => [coord.lon, coord.lat])
+                );
+                return turf.booleanOverlap(pathLineString, bufferedRoute);
+            });
+
+            await checkSegmentOnBikePath(segments, intersectingPaths, type);
         }
- 
+    } catch (error) {
+        console.error("Error fetching bike paths: ", error);
     }
- 
 }
  
 
@@ -1384,6 +1363,7 @@ async function getTrafficLights(bbox, segments) {
  
 
  
+
         try {
  
             const response = await axios.get(url);
@@ -1405,83 +1385,38 @@ async function getTrafficLights(bbox, segments) {
 
  
 async function checkForOSMBikepaths(PolylineCoords, routeIndex, numberOfRoutes) {
- 
-    let bbox_bottom_left = [200, 200];
- 
-    let bbox_top_right = [-200, -200];
- 
     const segments = [];
- 
 
- 
+    // Create segments from the polyline coordinates
     for (let i = 0; i < PolylineCoords.length - 1; i++) {
- 
         const start = PolylineCoords[i];
- 
         const end = PolylineCoords[i + 1];
- 
         segments.push([start, end]);
- 
-
- 
-        if (PolylineCoords[i][0] < bbox_bottom_left[0]) {
- 
-            bbox_bottom_left[0] = PolylineCoords[i][0];
- 
-        }
- 
-        if (PolylineCoords[i][1] < bbox_bottom_left[1]) {
- 
-            bbox_bottom_left[1] = PolylineCoords[i][1];
- 
-        }
- 
-        if (PolylineCoords[i][0] > bbox_top_right[0]) {
- 
-            bbox_top_right[0] = PolylineCoords[i][0];
- 
-        }
- 
-        if (PolylineCoords[i][1] > bbox_top_right[1]) {
- 
-            bbox_top_right[1] = PolylineCoords[i][1];
- 
-        }
- 
     }
- 
 
- 
-    const bbox = [bbox_bottom_left[0], bbox_bottom_left[1], bbox_top_right[0], bbox_top_right[1]];
- 
+    // Create a LineString from the polyline coordinates
+    const lineString = turf.lineString(PolylineCoords);
 
- 
+    // Create a buffer around the route (50 meters)
+    const bufferedRoute = turf.buffer(lineString, 50, { units: 'meters' });
+
+    // Get the bounding box of the buffered route
+    const bbox = turf.bbox(bufferedRoute);
+
+    // Fetch and check bike paths and traffic lights within the buffered area
     Promise.all([
- 
-        findAndCheckBikePaths('highway=cycleway', bbox, segments),
- 
-        findAndCheckBikePaths('bicycle=yes', bbox, segments),
- 
-        findAndCheckBikePaths('surface=paved', bbox, segments),
- 
-        findAndCheckBikePaths('surface=asphalt', bbox, segments),
- 
-        findAndCheckBikePaths('route=bicycle', bbox, segments),
- 
-        findAndCheckBikePaths('bicycle=designated', bbox, segments),
- 
-        findAndCheckBikePaths('surface=concrete', bbox, segments),
- 
-        findAndCheckBikePaths('surface=sett', bbox, segments),
- 
+        findAndCheckBikePaths('highway=cycleway', bufferedRoute, segments),
+        findAndCheckBikePaths('bicycle=yes', bufferedRoute, segments),
+        findAndCheckBikePaths('surface=paved', bufferedRoute, segments),
+        findAndCheckBikePaths('surface=asphalt', bufferedRoute, segments),
+        findAndCheckBikePaths('route=bicycle', bufferedRoute, segments),
+        findAndCheckBikePaths('bicycle=designated', bufferedRoute, segments),
+        findAndCheckBikePaths('surface=concrete', bufferedRoute, segments),
+        findAndCheckBikePaths('surface=sett', bufferedRoute, segments),
         getTrafficLights(bbox, segments)
- 
     ]).then(() => {
- 
         displayRatings(RoutesDistancesList[routeIndex], metersuplist, metersdownlist, finalBikePathsArray, TrafficLightIntersectionList, routeIndex, numberOfRoutes);
- 
     });
- 
 }
  
 
@@ -1502,6 +1437,7 @@ function NewRoute() {
  
 
  
+
 }
  
 
@@ -1512,7 +1448,6 @@ function Export_To_GMaps(routeIndex = best_route){
  
 
     window.open(export_url[RouteNames.indexOf(routeIndex)+1]);
- 
 
     if (best_route == "rot"){
  
@@ -1615,6 +1550,7 @@ async function fetchRouteAndRender(retryCount = 10) {
  
 
  
+
     try {
  
         const response = await fetch(url, {
@@ -1637,10 +1573,12 @@ async function fetchRouteAndRender(retryCount = 10) {
  
 
  
+
         const data = await response.json();
  
 
  
+
         if (!data.routes || data.routes.length === 0) {
  
             throw new Error('No routes found in the response');
@@ -1649,6 +1587,7 @@ async function fetchRouteAndRender(retryCount = 10) {
  
 
  
+
         numberOfRoutes = data.routes.length;
  
         clearAllPolylines();
@@ -1657,10 +1596,12 @@ async function fetchRouteAndRender(retryCount = 10) {
  
 
  
+
         const polylines = data.routes.map((route) => route.polyline.encodedPolyline);
  
 
  
+
         for (const [index, polyline] of polylines.entries()) {
  
             const decodedPolyline = google.maps.geometry.encoding.decodePath(polyline);
@@ -1679,6 +1620,7 @@ async function fetchRouteAndRender(retryCount = 10) {
  
 
  
+
             const routePolyline = new google.maps.Polyline({
  
                 path: decodedPolyline,
@@ -1695,6 +1637,7 @@ async function fetchRouteAndRender(retryCount = 10) {
  
 
  
+
             routePolyline.setMap(map);
  
             polylinesArray.push(routePolyline);
@@ -1705,6 +1648,7 @@ async function fetchRouteAndRender(retryCount = 10) {
  
 
  
+
             if (document.getElementById('ElevationGainCheck').checked || document.getElementById('ElevationLossCheck').checked) {
  
                 await fetchElevationData(decodedPolyline, index);
@@ -1713,6 +1657,7 @@ async function fetchRouteAndRender(retryCount = 10) {
  
 
  
+
             await checkForOSMBikepaths(PolylineCoords, index, numberOfRoutes);
  
         }
@@ -1725,6 +1670,7 @@ async function fetchRouteAndRender(retryCount = 10) {
  
 
  
+
         if (retryCount > 0) {
  
             console.error(`Retrying... (${retryCount + 1})`);
@@ -1749,6 +1695,7 @@ function checkTrafficLights(trafficLights, segments) {
  
 
  
+
     for (const light of trafficLights) {
  
         const lat = light.lat;
@@ -1757,12 +1704,14 @@ function checkTrafficLights(trafficLights, segments) {
  
 
  
+
         // Create a point for the traffic light
  
         const point = turf.point([lon, lat]);
  
 
  
+
         // Buffer the point by 5 meters
  
         const buffered = turf.buffer(point, 20, { units: 'meters' });
@@ -1809,6 +1758,7 @@ function appendRatingItem(ratingsList, condition, value, index, label, ratingLis
  
 
  
+
         const existingItem = document.getElementById(id);
  
         if (existingItem) {
@@ -1851,6 +1801,7 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
  
 
  
+
     return new Promise((resolve, reject) => {
  
         try {
@@ -1865,6 +1816,7 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
  
 
  
+
             for (let i = 0; i < finalBikePathsArray.length; i++) {
  
                 for (let j = 0; j < finalBikePathsArray[i].length; j++) {
@@ -1881,6 +1833,7 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
  
 
  
+
             if (polylinesArray.length > 1) {
  
                 oneRoute = false;
@@ -1911,6 +1864,7 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
  
 
  
+
             } else {
  
                 oneRoute = true;
@@ -1919,6 +1873,7 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
  
 
  
+
             resolve();
  
         } catch (error) {
@@ -1933,6 +1888,7 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
  
 
  
+
         for (let i = 0; i < Distance_ratingList.length; i++) {
  
             let numerator = [
@@ -1949,10 +1905,12 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
  
 
  
+
             let denominator = 1
  
 
  
+
             if (denominator !== 0) {
  
                 BikepathsRatingsList.push(numerator / denominator);
@@ -1967,6 +1925,7 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
  
 
  
+
         SurfaceRatingsList = [];
  
         for (let i = 0; i < Distance_ratingList.length; i++) {
@@ -1983,6 +1942,7 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
  
 
  
+
             let denominator = [
  
                 surface_sett_ratingList[i]
@@ -1991,6 +1951,7 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
  
 
  
+
             if (denominator !== 0) {
  
                 SurfaceRatingsList.push(numerator / denominator);
@@ -2005,12 +1966,14 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
  
 
  
+
         ElevationRatingsList = [];
  
         for (let i = 0; i < Distance_ratingList.length; i++) {
  
 
  
+
             let numerator = [
  
                 Elevation_Loss_ratingList[i],
@@ -2019,6 +1982,7 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
  
 
  
+
             let denominator = [
  
                 Elevation_Gain_ratingList[i],
@@ -2027,6 +1991,7 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
  
 
  
+
             if (denominator !== 0) {
  
                 ElevationRatingsList.push(numerator / denominator);
@@ -2041,12 +2006,14 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
  
 
  
+
         finalRatingList = [];
  
         for (let i = 0; i < Distance_ratingList.length; i++) {
  
 
  
+
             let numerator = [
  
                 Elevation_Loss_ratingList[i],
@@ -2069,6 +2036,7 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
  
 
  
+
             let denominator = [
  
                 Distance_ratingList[i],
@@ -2083,6 +2051,7 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
  
 
  
+
             if (denominator !== 0) {
  
                 finalRatingList.push(numerator / denominator);
@@ -2105,6 +2074,7 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
  
 
  
+
             if (finalRatingList.length > 1) {
  
                 ratingsList.appendChild(createRatingItem(`overall-rating-${index}`, `Overall Rating: ${finalRatingList[index].toFixed(2)} \n`));
@@ -2117,72 +2087,84 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
  
 
  
+
             const distanceCheck = document.getElementById('DistanceCheck');
  
             appendRatingItem(ratingsList, RoutesDistancesList.length > 0 && distanceCheck.checked, RoutesDistancesList, index, 'Distance', Distance_ratingList, 'meters');
  
 
  
+
             const elevationGainCheck = document.getElementById('ElevationGainCheck');
  
             appendRatingItem(ratingsList, metersuplist.length > 0 && elevationGainCheck.checked, metersuplist, index, 'Elevation Gain', Elevation_Gain_ratingList, 'meters');
  
 
  
+
             const elevationLossCheck = document.getElementById('ElevationLossCheck');
  
             appendRatingItem(ratingsList, metersdownlist.length > 0 && elevationLossCheck.checked, metersdownlist, index, 'Elevation Loss', Elevation_Loss_ratingList, 'meters');
  
 
  
+
             const trafficLightsCheck = document.getElementById('trafficLightsCheck');
  
             appendRatingItem(ratingsList, TrafficLightIntersectionList.length > 0 && trafficLightsCheck.checked, TrafficLightIntersectionList, index, 'Traffic lights', traffic_lights_ratingList, false);
  
 
  
+
             const highwayCyclewayCheck = document.getElementById('highway=cyclewayCheck');
  
             appendRatingItem(ratingsList, finalBikePathsArray[0] && finalBikePathsArray[0][index] !== undefined && highwayCyclewayCheck.checked, finalBikePathsArray[0], index, 'highway=cycleway', highway_cycleway_ratingList);
  
 
  
+
             const bicycleYesCheck = document.getElementById('bicycle=yesCheck');
  
             appendRatingItem(ratingsList, finalBikePathsArray[1] && finalBikePathsArray[1][index] !== undefined && bicycleYesCheck.checked, finalBikePathsArray[1], index, 'bicycle=yes', bicycle_yes_ratingList);
  
 
  
+
             const surfacePavedCheck = document.getElementById('surface=pavedCheck');
  
             appendRatingItem(ratingsList, finalBikePathsArray[2] && finalBikePathsArray[2][index] !== undefined && surfacePavedCheck.checked, finalBikePathsArray[2], index, 'surface=paved', surface_paved_ratingList);
  
 
  
+
             const surfaceAsphaltCheck = document.getElementById('surface=asphaltCheck');
  
             appendRatingItem(ratingsList, finalBikePathsArray[3] && finalBikePathsArray[3][index] !== undefined && surfaceAsphaltCheck.checked, finalBikePathsArray[3], index, 'surface=asphalt', surface_asphalt_ratingList);
  
 
  
+
             const routeBicycleCheck = document.getElementById('route=bicycleCheck');
  
             appendRatingItem(ratingsList, finalBikePathsArray[4] && finalBikePathsArray[4][index] !== undefined && routeBicycleCheck.checked, finalBikePathsArray[4], index, 'route=bicycle', route_bicycle_ratingList);
  
 
  
+
             const bicycleDesignatedCheck = document.getElementById('bicycle=designatedCheck');
  
             appendRatingItem(ratingsList, finalBikePathsArray[5] && finalBikePathsArray[5][index] !== undefined && bicycleDesignatedCheck.checked, finalBikePathsArray[5], index, 'bicycle=designated', bicycle_designated_ratingList);
  
 
  
+
             const surfaceConcreteCheck = document.getElementById('surface=concreteCheck');
  
             appendRatingItem(ratingsList, finalBikePathsArray[6] && finalBikePathsArray[6][index] !== undefined && surfaceConcreteCheck.checked, finalBikePathsArray[6], index, 'surface=concrete', surface_concrete_ratingList);
  
 
  
+
             const surfaceSettCheck = document.getElementById('surface=settCheck');
  
             appendRatingItem(ratingsList, finalBikePathsArray[7] && finalBikePathsArray[7][index] !== undefined && surfaceSettCheck.checked, finalBikePathsArray[7], index, 'surface=sett', surface_sett_ratingList);
@@ -2191,6 +2173,7 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
  
 
  
+
         if (index==numberOfRoutes - 1) {
  
             if (throbber_container.style.display = 'block'){
@@ -2221,6 +2204,7 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
  
 
  
+
         /*if (index === numberOfRoutes - 1) {
  
             if (throbber_container.style.display = 'block'){
@@ -2239,8 +2223,6 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
  
                     document.getElementById('result_3').style.display = 'none';
  
-
- 
                     document.getElementById('result_1').innerText = 'Only one viable route found';
  
                 }
@@ -2252,8 +2234,6 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
                     document.getElementById('result_2').style.display = 'block';
  
                     document.getElementById('result_3').style.display = 'none';
- 
-
  
                     document.getElementById('result_1').innerText = RouteNames[0] + ' - Rating: ' + finalRatingList[0].toFixed(2);
  
@@ -2268,8 +2248,6 @@ function displayRatings(routeDistance, metersuplist, metersdownlist, finalBikePa
                     document.getElementById('result_2').style.display = 'block';
  
                     document.getElementById('result_3').style.display = 'block';
- 
-          
  
                     document.getElementById('result_1').innerText = RouteNames[0] + ' - Rating: ' + finalRatingList[0].toFixed(2);
  
@@ -2309,6 +2287,7 @@ async function fetchElevationData(path, routeIndex) {
  
 
  
+
     if (!path || path.length === 0) {
  
         console.error('Invalid path data');
@@ -2319,6 +2298,7 @@ async function fetchElevationData(path, routeIndex) {
  
 
  
+
     // Prepare the path coordinates for the OpenElevation API
  
     const coordinates = path.map(point => `${point.lat()},${point.lng()}`).join('|');
@@ -2331,6 +2311,7 @@ async function fetchElevationData(path, routeIndex) {
  
 
  
+
     const pathRequest ={
  
         path:path, 
@@ -2341,6 +2322,7 @@ async function fetchElevationData(path, routeIndex) {
  
 
  
+
     elevationService.getElevationAlongPath(pathRequest, (results, status) => {
  
         if (status === 'OK') {
@@ -2354,7 +2336,6 @@ async function fetchElevationData(path, routeIndex) {
 
  
 
- 
                 // Extract elevation values
  
                 const elevations = results.map(result => result.elevation);
@@ -2417,6 +2398,7 @@ async function fetchElevationData(path, routeIndex) {
  
 
  
+
     });
  
 }
